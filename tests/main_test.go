@@ -18,7 +18,6 @@ import (
 	"homelib/server"
 	"homelib/utils"
 
-	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,13 +41,6 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	if expected != actual {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
-}
-
-func TestMain(m *testing.M) {
-	godotenv.Load("../.env")
-
-	rc := m.Run()
-	os.Exit(rc)
 }
 
 
@@ -114,7 +106,6 @@ func TestQueueWithBlobLarge(t *testing.T) {
 func TestUploadSmall(t *testing.T) {
 	s := server.CreateServer()
 	server.MountHandlers(s)
-	os.Getenv("BASE_URL")
 
 	file, err := os.Open("../data/small.blob")
 	require.NoError(t, err, "Failed to open small file")
@@ -215,6 +206,8 @@ func TestListFiles(t *testing.T) {
 	require.Equal(t, "medium.blob", fileNodes[1].Name, nil)
 	require.Equal(t, "large.blob", fileNodes[2].Name, nil)
 }
+
+
 
 
 
