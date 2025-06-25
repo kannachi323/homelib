@@ -25,6 +25,7 @@ func CreateServer() *Server {
 func MountHandlers(s *Server) {
 	s.Router.Get("/", connect)
 	s.Router.Post("/upload", api.Upload())
+	s.Router.Get("/files", api.ListFiles())
 }
 
 func connect(w http.ResponseWriter, r *http.Request) {

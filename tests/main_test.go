@@ -3,17 +3,22 @@ package tests
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
+	"homelib/api"
 	"homelib/server"
 	"homelib/utils"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,6 +42,13 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	if expected != actual {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
+}
+
+func TestMain(m *testing.M) {
+	godotenv.Load("../.env")
+
+	rc := m.Run()
+	os.Exit(rc)
 }
 
 
@@ -102,6 +114,7 @@ func TestQueueWithBlobLarge(t *testing.T) {
 func TestUploadSmall(t *testing.T) {
 	s := server.CreateServer()
 	server.MountHandlers(s)
+	os.Getenv("BASE_URL")
 
 	file, err := os.Open("../data/small.blob")
 	require.NoError(t, err, "Failed to open small file")
@@ -179,6 +192,28 @@ func TestUploadLarge(t *testing.T) {
 	rr := executeRequest(req, s)
 	checkResponseCode(t, http.StatusCreated, rr.Code)
 
+}
+
+func TestListFiles(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/files?path=%s", os.Getenv("BASE_URL") + "/data"), nil)
+	rr := executeRequest(req, s)
+
+	checkResponseCode(t, http.StatusOK, rr.Code)
+	var fileNodes []api.FileNode
+
+	err := json.Unmarshal(rr.Body.Bytes(), &fileNodes)
+	require.NoError(t, err, "Failed to unmarshal response body")
+
+	sort.Slice(fileNodes, func(i, j int) bool {
+		return fileNodes[i].Size < fileNodes[j].Size
+	})
+
+	require.Equal(t, "small.blob", fileNodes[0].Name, nil)
+	require.Equal(t, "medium.blob", fileNodes[1].Name, nil)
+	require.Equal(t, "large.blob", fileNodes[2].Name, nil)
 }
 
 
