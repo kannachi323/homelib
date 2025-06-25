@@ -1,7 +1,9 @@
 package api
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -57,8 +59,6 @@ func ListFiles() http.HandlerFunc {
 			path = os.Getenv("BASE_URL")
 		}
 
-		log.Println(path)
-
 		files, err := os.ReadDir(path)
 		if err != nil {
 			http.Error(w, "Failed to read files", http.StatusInternalServerError)
@@ -86,3 +86,97 @@ func ListFiles() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 	}
 }
+
+func Download() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		filePath := r.URL.Query().Get("path")
+
+		if filePath == "" {
+			http.Error(w, "File path is required", http.StatusBadRequest)
+			return
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			http.Error(w, "Failed to open file", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		// Get file info for name and size
+		info, err := file.Stat()
+		if err != nil {
+			http.Error(w, "Failed to get file info", http.StatusInternalServerError)
+			return
+		}
+
+		// Set headers to trigger download
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+info.Name()+"\"")
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size()))
+
+		// Stream file directly to response
+		if _, err := io.Copy(w, file); err != nil {
+			http.Error(w, "Failed to send file", http.StatusInternalServerError)
+		}
+	}
+}
+
+func DownloadZip() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		paths := r.URL.Query()["path"]
+
+		if len(paths) == 0 {
+			http.Error(w, "No file paths provided", http.StatusBadRequest)
+			return
+		}
+
+		if len(paths) > 25 {
+			http.Error(w, "Too many files requested, limit is 20", http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"files.zip\"")
+
+		zipWriter := zip.NewWriter(w)
+		defer zipWriter.Close()
+
+		for _, filePath := range paths {
+			file, err := os.Open(filePath)
+			if err != nil {
+				log.Printf("Skipping file %s: %v", filePath, err)
+				continue
+			}
+			defer file.Close()
+
+			info, err := file.Stat()
+			if err != nil {
+				log.Printf("Skipping file %s: %v", filePath, err)
+				continue
+			}
+
+			header, err := zip.FileInfoHeader(info)
+			if err != nil {
+				log.Printf("Error creating header for %s: %v", filePath, err)
+				continue
+			}
+
+			header.Name = filepath.Base(filePath)
+			header.Method = zip.Deflate
+
+			writer, err := zipWriter.CreateHeader(header)
+			if err != nil {
+				log.Printf("Error adding file %s to zip: %v", filePath, err)
+				continue
+			}
+
+			if _, err := io.Copy(writer, file); err != nil {
+				log.Printf("Error writing file %s to zip: %v", filePath, err)
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+

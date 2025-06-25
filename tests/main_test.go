@@ -9,15 +9,18 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"homelib/api"
 	"homelib/server"
 	"homelib/utils"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,6 +44,13 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	if expected != actual {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
+}
+
+func TestMain(m *testing.M) {
+	godotenv.Load("../.env")
+
+	rc := m.Run()
+	os.Exit(rc)
 }
 
 
@@ -121,7 +131,7 @@ func TestUploadSmall(t *testing.T) {
 	require.NoError(t, err, "Failed to copy file content to form file")
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/upload", &body)
+	req := httptest.NewRequest("POST", "/file", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 
@@ -148,7 +158,7 @@ func TestUploadMedium(t *testing.T) {
 	require.NoError(t, err, "Failed to copy file content to form file")
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/upload", &body)
+	req := httptest.NewRequest("POST", "/file", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 
@@ -176,7 +186,7 @@ func TestUploadLarge(t *testing.T) {
 	require.NoError(t, err, "Failed to copy file content to form file")
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/upload", &body)
+	req := httptest.NewRequest("POST", "/file", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 
@@ -205,6 +215,66 @@ func TestListFiles(t *testing.T) {
 	require.Equal(t, "small.blob", fileNodes[0].Name, nil)
 	require.Equal(t, "medium.blob", fileNodes[1].Name, nil)
 	require.Equal(t, "large.blob", fileNodes[2].Name, nil)
+}
+
+func TestDownloadFile(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	filePath := os.Getenv("BASE_URL") + "/data/small.blob"
+	req := httptest.NewRequest("GET", fmt.Sprintf("/file?path=%s", filePath), nil)
+	rr := executeRequest(req, s)
+
+	checkResponseCode(t, http.StatusOK, rr.Code)
+	require.Equal(t, "application/octet-stream", rr.Header().Get("Content-Type"))
+	require.Contains(t, rr.Header().Get("Content-Disposition"), "attachment")
+
+	expectedFileBytes, err := os.ReadFile(filePath)
+	require.NoError(t, err, "Failed to read file content")
+
+	actualFileBytes := rr.Body.Bytes()
+
+	require.Equal(t, expectedFileBytes, actualFileBytes, "Downloaded file content does not match original file content")
+}
+
+func TestDownloadZip(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	filePaths := []string{
+		os.Getenv("BASE_URL") + "/data/small.blob",
+		os.Getenv("BASE_URL") + "/data/medium.blob",
+		os.Getenv("BASE_URL") + "/data/large.blob",
+	}
+
+	var queryParts []string
+	for _, path := range filePaths {
+		queryParts = append(queryParts, "path=" + url.QueryEscape(path))
+	}
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/files-zip?%s", strings.Join(queryParts, "&")), nil)
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusOK, rr.Code)
+}
+
+func TestCreateNewUser(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	userData := &api.SignUpRequest{
+		Email: "test@gmail.com",
+		Password: "123456789",
+	}
+
+	jsonData, err := json.Marshal(userData)
+	require.NoError(t, err, "Failed to marshal user data")
+
+	req := httptest.NewRequest("POST", "/signup", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusCreated, rr.Code)
 }
 
 

@@ -6,28 +6,22 @@
 
 ---
 
-## ✅ Pre-Week Setup (Optional)
-
-- [ ] Flash Raspberry Pi OS (Lite or Full)
-- [ ] Install:
-  - Redis
-  - Node.js / Go / Python (your backend language)
-  - SQLite or Postgres
-  - Docker (optional)
-- [ ] Mount SSD/HDD to `/mnt/homelib`
-- [ ] Set up Git repo
-
----
-
-## 🗓️ Day 1 — Project Bootstrap & Local Upload API
+## Day 1 — Project Bootstrap & Local Upload API
 
 - [✅] Create basic REST API:
-  - `POST /upload`
-  - `POST /user`
-  - `GET /files`
-- [ ] Store files to `/mnt/homelib/{username}/`
-- [ ] Store file metadata in DB (SQLite or Postgres)
-- [] CLI or curl test for uploads
+  - `GET /file` (download file)
+  - `POST /file` (upload file)
+  - `GET /files` (list files in disk with certain path or default root)
+  - `GET /files-zip` (download multiple files as a zip *max 20)
+  - `POST /user` (create a new user in the database)
+
+- [✅] pass tests for all implemented apis
+
+- [  ] set up middleware to track users
+- [  ] create /mnt directory for Windows/MacOS users
+- [✅] Store files to `homelib/mnt/{username}/`
+- [  ] set up docker compose and database containers
+- [  ] create simple user tables
 
 ---
 

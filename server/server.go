@@ -1,10 +1,6 @@
 package server
 
 import (
-	"fmt"
-	"net"
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 
 	"homelib/api"
@@ -23,17 +19,12 @@ func CreateServer() *Server {
 }
 
 func MountHandlers(s *Server) {
-	s.Router.Get("/", connect)
-	s.Router.Post("/upload", api.Upload())
+
+	s.Router.Post("/file", api.Upload())
+	s.Router.Get("/file", api.Download())
+	s.Router.Get("/files-zip", api.DownloadZip())
 	s.Router.Get("/files", api.ListFiles())
-}
 
-func connect(w http.ResponseWriter, r *http.Request) {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		http.Error(w, "Unable to parse remote address", http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Printf("Client connected from IP: %s\n", ip)
+	s.Router.Post("/signup", api.SignUp())
+	
 }
