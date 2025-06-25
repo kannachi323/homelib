@@ -1,9 +1,17 @@
 package tests
 
 import (
+	"bytes"
 	"crypto/rand"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"homelib/server"
 	"homelib/utils"
 
 	"github.com/stretchr/testify/require"
@@ -16,6 +24,19 @@ func GenerateRandomBytes(n int) ([]byte, error) {
         return nil, err
     }
     return b, nil
+}
+
+func executeRequest(req *http.Request, s *server.Server) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	s.Router.ServeHTTP(rr, req)
+
+	return rr
+}
+
+func checkResponseCode(t *testing.T, expected, actual int) {
+	if expected != actual {
+		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+	}
 }
 
 
@@ -77,6 +98,89 @@ func TestQueueWithBlobLarge(t *testing.T) {
 		require.Equal(t, "text", blob.GetFileType(), "Blob file type should be string")
 	}
 }
+
+func TestUploadSmall(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	file, err := os.Open("../data/small.blob")
+	require.NoError(t, err, "Failed to open small file")
+	defer file.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	require.NoError(t, err, "Failed to create form file")
+
+	_, err = io.Copy(part, file)
+	require.NoError(t, err, "Failed to copy file content to form file")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusCreated, rr.Code)
+
+}
+
+func TestUploadMedium(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	file, err := os.Open("../data/medium.blob")
+	require.NoError(t, err, "Failed to open small file")
+	defer file.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	require.NoError(t, err, "Failed to create form file")
+
+	_, err = io.Copy(part, file)
+	require.NoError(t, err, "Failed to copy file content to form file")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusCreated, rr.Code)
+
+}
+
+
+func TestUploadLarge(t *testing.T) {
+	s := server.CreateServer()
+	server.MountHandlers(s)
+
+	file, err := os.Open("../data/large.blob")
+	require.NoError(t, err, "Failed to open small file")
+	defer file.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	require.NoError(t, err, "Failed to create form file")
+
+	_, err = io.Copy(part, file)
+	require.NoError(t, err, "Failed to copy file content to form file")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/upload", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusCreated, rr.Code)
+
+}
+
 
 
 

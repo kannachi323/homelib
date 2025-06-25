@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -6,24 +6,25 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
+	"homelib/api"
 )
 
 type Server struct {
-	router *chi.Mux
+	Router *chi.Mux
 }
 
 func CreateServer() *Server {
     s := &Server{
-		router: chi.NewRouter(),
+		Router: chi.NewRouter(),
 	}
-	
-
 
 	return s
 }
 
 func MountHandlers(s *Server) {
-	s.router.Get("/", connect)
+	s.Router.Get("/", connect)
+	s.Router.Post("/upload", api.Upload())
 }
 
 func connect(w http.ResponseWriter, r *http.Request) {
