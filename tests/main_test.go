@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -17,21 +18,72 @@ import (
 	"testing"
 
 	"homelib/api"
+	"homelib/db"
 	"homelib/server"
 	"homelib/utils"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
-func GenerateRandomBytes(n int) ([]byte, error) {
-    b := make([]byte, n)
-    _, err := rand.Read(b)
-    if err != nil {
-        return nil, err
-    }
-    return b, nil
+var testDB *db.Database
+
+func StartTestDB(testDB *db.Database) error {
+	ctx := context.Background()
+	dsn := os.Getenv("DATABASE_URL_TEST")
+
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return fmt.Errorf("unable to create connection pool: %w", err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		return fmt.Errorf("unable to connect to database: %w", err)
+	}
+
+	testDB.Pool = pool
+
+	return nil
+}	
+
+func CloseTestDB(testDB *db.Database) {
+	if testDB.Pool != nil {
+		testDB.Pool.Close()
+	}
 }
+
+func ResetTestDB(testDB *db.Database) error {
+	ctx := context.Background()
+	_, err := testDB.Pool.Exec(ctx, "TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	if err != nil {
+		return fmt.Errorf("failed to truncate test database: %w", err)
+	}
+	
+	sqlBytes, err := os.ReadFile("../db/sql/data.sql")
+	if err != nil {
+		return fmt.Errorf("failed to read SQL file: %w", err)
+	}
+	sql := string(sqlBytes)
+
+	_, err = testDB.Pool.Exec(ctx, sql)
+	if err != nil {
+		return fmt.Errorf("failed to seed test database: %w", err)
+	}
+	return nil
+}
+
+func CreateTestServer() *server.Server {
+	s := &server.Server{
+		Router: chi.NewRouter(),
+		DB: testDB, //this database is already mounted from main test setup
+	}
+	s.MountHandlers()
+
+	return s
+}
+
 
 func executeRequest(req *http.Request, s *server.Server) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
@@ -46,11 +98,33 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	}
 }
 
+func GenerateRandomBytes(n int) ([]byte, error) {
+    b := make([]byte, n)
+    _, err := rand.Read(b)
+    if err != nil {
+        return nil, err
+    }
+    return b, nil
+}
+
+
+
 func TestMain(m *testing.M) {
 	godotenv.Load("../.env")
 
+
+	testDB = &db.Database{}
+	err := StartTestDB(testDB)
+	if err != nil {
+		fmt.Println("Failed to start test DB:", err)
+		os.Exit(1)
+	}
+	defer CloseTestDB(testDB)
+
+
 	rc := m.Run()
 	os.Exit(rc)
+
 }
 
 
@@ -114,8 +188,7 @@ func TestQueueWithBlobLarge(t *testing.T) {
 }
 
 func TestUploadSmall(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
 
 	file, err := os.Open("../data/small.blob")
 	require.NoError(t, err, "Failed to open small file")
@@ -141,8 +214,8 @@ func TestUploadSmall(t *testing.T) {
 }
 
 func TestUploadMedium(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
+
 
 	file, err := os.Open("../data/medium.blob")
 	require.NoError(t, err, "Failed to open small file")
@@ -169,8 +242,7 @@ func TestUploadMedium(t *testing.T) {
 
 
 func TestUploadLarge(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
 
 	file, err := os.Open("../data/large.blob")
 	require.NoError(t, err, "Failed to open small file")
@@ -196,8 +268,8 @@ func TestUploadLarge(t *testing.T) {
 }
 
 func TestListFiles(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
+
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/files?path=%s", os.Getenv("BASE_URL") + "/data"), nil)
 	rr := executeRequest(req, s)
@@ -218,8 +290,8 @@ func TestListFiles(t *testing.T) {
 }
 
 func TestDownloadFile(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
+
 
 	filePath := os.Getenv("BASE_URL") + "/data/small.blob"
 	req := httptest.NewRequest("GET", fmt.Sprintf("/file?path=%s", filePath), nil)
@@ -238,8 +310,7 @@ func TestDownloadFile(t *testing.T) {
 }
 
 func TestDownloadZip(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
 
 	filePaths := []string{
 		os.Getenv("BASE_URL") + "/data/small.blob",
@@ -259,12 +330,12 @@ func TestDownloadZip(t *testing.T) {
 }
 
 func TestCreateNewUser(t *testing.T) {
-	s := server.CreateServer()
-	server.MountHandlers(s)
+	s := CreateTestServer()
+
 
 	userData := &api.SignUpRequest{
 		Email: "test@gmail.com",
-		Password: "123456789",
+		Password: "test",
 	}
 
 	jsonData, err := json.Marshal(userData)
@@ -276,6 +347,28 @@ func TestCreateNewUser(t *testing.T) {
 	rr := executeRequest(req, s)
 	checkResponseCode(t, http.StatusCreated, rr.Code)
 }
+
+func TestLogInUser(t *testing.T) {
+	require.NoError(t, ResetTestDB(testDB))
+	s := CreateTestServer()
+
+	userData := &api.LogInRequest{
+		Email: "testuser@gmail.com",
+		Password: "test1234",
+	}
+
+	jsonData, err := json.Marshal(userData)
+	require.NoError(t, err, "Failed to marshal user data")
+
+	req := httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := executeRequest(req, s)
+	checkResponseCode(t, http.StatusOK, rr.Code)
+}
+
+
+
 
 
 

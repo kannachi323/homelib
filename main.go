@@ -11,7 +11,7 @@ func main() {
 	godotenv.Load(".env")
 	s := server.CreateServer()
 
-	server.MountHandlers(s)
+	s.MountHandlers()
 
 	http.ListenAndServe(":8080", s.Router)
 
