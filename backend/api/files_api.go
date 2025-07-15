@@ -83,7 +83,6 @@ func ListFiles() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(fileNodes)
-		w.WriteHeader(http.StatusOK)
 	}
 }
 

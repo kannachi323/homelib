@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 
 	"homelib/api"
 	"homelib/db"
@@ -17,6 +18,13 @@ func CreateServer() *Server {
 		Router: chi.NewRouter(),
 		DB: &db.Database{},
 	}
+
+	s.Router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"}, // Or "*"
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowCredentials: true,
+	}))
 
 	return s
 }
