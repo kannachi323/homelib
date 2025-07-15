@@ -36,7 +36,10 @@ func (s *Server) MountHandlers() {
 	s.Router.Get("/files-zip", api.DownloadZip())
 	s.Router.Get("/files", api.ListFiles())
 
+	s.Router.Get("/disks", api.ListDisks())
+
 	s.Router.Post("/signup", api.SignUp(s.DB))
 	s.Router.Post("/login", api.LogIn(s.DB))
+	
 	
 }
