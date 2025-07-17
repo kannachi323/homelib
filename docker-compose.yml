@@ -1,0 +1,26 @@
+services:
+  homelib-db:
+    container_name: homelib-db
+    restart: always
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/sql/extensions.sql:/docker-entrypoint-initdb.d/1.extensions.sql
+      - ./db/sql/schema.sql:/docker-entrypoint-initdb.d/2.schema.sql
+      - ./db/sql/data.sql:/docker-entrypoint-initdb.d/3.data.sql
+
+  homelib-go:
+    container_name: homelib-go
+    restart: always
+    image: golang:tip-alpine3.22
+    volumes:
+      - ./homelib-go:/homelib-go
+    working_dir: /app
+    command: ["./homelib-go"]
+    ports:
+      - "8080:8080"

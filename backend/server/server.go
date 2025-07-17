@@ -21,7 +21,7 @@ func CreateServer() *Server {
 	}
 
 	s.Router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // Or "*"
+		AllowedOrigins:   []string{"*"}, // Or "*"
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		AllowCredentials: true,

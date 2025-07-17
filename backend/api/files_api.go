@@ -104,7 +104,6 @@ func Download() http.HandlerFunc {
 		}
 		defer file.Close()
 
-		// Get file info for name and size
 		info, err := file.Stat()
 		if err != nil {
 			http.Error(w, "Failed to get file info", http.StatusInternalServerError)
