@@ -14,6 +14,12 @@ interface FileExplorerContext {
   setLayout: (layout: 'grid' | 'list') => void;
   files: File[];
   setFiles: (files: File[]) => void;
+  forwardStack: string[];
+  backStack: string[];
+  startAt: (path: string | null) => void;
+  navigateTo: (newPath: string) => void;
+  goBack: () => void;
+  goForward: () => void;
 }
 
 export const FileExplorerContext = createContext<FileExplorerContext | undefined>(undefined);

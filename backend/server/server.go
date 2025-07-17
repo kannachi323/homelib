@@ -6,6 +6,7 @@ import (
 
 	"homelib/api"
 	"homelib/db"
+	"homelib/middleware"
 )
 
 type Server struct {
@@ -34,8 +35,8 @@ func (s *Server) MountHandlers() {
 	s.Router.Post("/file", api.Upload())
 	s.Router.Get("/file", api.Download())
 	s.Router.Get("/files-zip", api.DownloadZip())
-	s.Router.Get("/files", api.ListFiles())
-
+	s.Router.With(middleware.ValidatePathMiddleware).Get("/files", api.ListFiles())
+	
 	s.Router.Get("/disks", api.ListDisks())
 
 	s.Router.Post("/signup", api.SignUp(s.DB))

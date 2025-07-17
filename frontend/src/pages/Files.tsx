@@ -1,52 +1,54 @@
 import { useEffect } from "react";
-import { FaRegFolder } from "react-icons/fa";
-import { FaRegFile } from "react-icons/fa";
+import { exists } from '@tauri-apps/plugin-fs';
+import { openPath } from "@tauri-apps/plugin-opener";
 
 
-import { useDisk } from "../hooks/useDisk";
+
+
+import { downloadFile } from "../utils/files";
 import { useFileExplorer } from "../hooks/useFileExplorer";
 import { FiltersBar } from "../ui/FileExplorer";
-
+import { type File } from "../contexts/FileExplorerContext";
+import FILE_SVG from "../assets/file.svg";
+import FOLDER_SVG from "../assets/folder.svg";
 
 export default function Files() {
-  const { setDisks, currentDisk } = useDisk();
-  const { setCurrentPath, setFiles, files } = useFileExplorer();
+  const { files, startAt, navigateTo  } = useFileExplorer();
 
   useEffect(() => {
-    if (!currentDisk || !currentDisk.mountpoint) {
-      console.warn("No disk selected or mountpoint missing");
-      setFiles([]);
-      return;
-    }
-    
-    async function fetchFiles() {
+      //remember what path i was on last when component was mounted
+      const lastPath = localStorage.getItem('lastPath');
+      if (lastPath) {
+        startAt(null);
+
+      } else {
+        startAt('/');
+      }
+  
+    }, [startAt])
+
+  async function handleFileClick(file: File) {
+    let downloadPath = `${import.meta.env.VITE_DOWNLOAD_DIR}/${file.name}`;
+    if (file.isDir) {
+      navigateTo(file.path);
+    } else {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/files?path=${currentDisk?.mountpoint}/Users/mtccool668/projects`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          setFiles([]);
-          throw new Error(`Error fetching files: ${response.statusText}`);
+        const fileExists = await exists(downloadPath);
+        
+        if (!fileExists) {
+          console.log('trying to download');
+          downloadPath = await downloadFile(file.path);
         }
 
-        const data = await response.json();
-        if (data.length > 0) {
-          setFiles(data);
-        }
-       
-   
+        console.log("got here");
+
+        await openPath(downloadPath);
+
       } catch (error) {
-        console.error("Failed to fetch files:", error);
+        console.error("Error opening file:", error);
       }
     }
-
-    fetchFiles();
-  }, [currentDisk, setDisks, setCurrentPath, setFiles]);
-
+  }
 
   return (
     <div className="flex flex-col h-full max-h-screen">
@@ -54,8 +56,10 @@ export default function Files() {
         <FiltersBar />
         <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-5 p-2">
           {files.map((file) => (
-            <div key={file.name} className="flex flex-col items-center rounded cursor-pointer hover:bg-white/10 p-2">
-              {file.isDir ? <FaRegFolder className="text-4xl mb-2 text-gray-300" /> : <FaRegFile className="text-4xl mb-2 text-gray-300" />}
+            <div key={file.name} className="flex flex-col items-center rounded hover:bg-white/10 p-2"
+              onDoubleClick={() => handleFileClick(file)}
+            >
+              {file.isDir ? <img src={FOLDER_SVG} className="w-[64px] h-[64px]" /> : <img src={FILE_SVG} className="w-[64px] h-[64px]"/>}
               <p className="text-sm text-center truncate w-full">{file.name}</p>
             </div>
           ))}

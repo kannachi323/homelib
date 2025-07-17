@@ -1,21 +1,26 @@
-import { useRef, useState } from "react";
-import { MdSearch } from "react-icons/md";
-import { MdRefresh } from "react-icons/md";
-import { useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
+import { MdRefresh, MdSearch } from "react-icons/md";
 import { PiFolders } from "react-icons/pi";
 import { FaSort } from "react-icons/fa";
 import { CiGrid41 } from "react-icons/ci";
 import { CiBoxList } from "react-icons/ci";
 import { LiaFilterSolid } from "react-icons/lia";
+import { RiArrowLeftSLine, RiArrowRightSLine } from "react-icons/ri";
+
 
 import { useClickOutside } from "../hooks/useClickOutside";
 import { useFileExplorer } from "../hooks/useFileExplorer";
+import { useLastPath } from "../hooks/useLathPath";
+import { useNavigate } from "react-router";
 
 
 
 export function FileExplorerTab({isOpen} : {isOpen: boolean}) {
+  const navigate = useNavigate();
   return (
-    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center'} items-center w-full`}>
+    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center'} items-center w-full`}
+      onClick={() => navigate('/')}
+    >
       <PiFolders className="text-2xl"/>
       {isOpen && 
           <h1 className="text-lg font-bold whitespace-nowrap">
@@ -27,58 +32,84 @@ export function FileExplorerTab({isOpen} : {isOpen: boolean}) {
 }
 
 export function FileExplorer() {
-  const { currentPath, setCurrentPath } = useFileExplorer();
+  const { goBack, goForward, forwardStack, backStack } = useFileExplorer();
 
-  useEffect(() => {
-    const savedPath = localStorage.getItem("currentPath");
-    if (savedPath) {
-      setCurrentPath(savedPath);
-    } else {
-      setCurrentPath("/homelib");
-    }
-  }, [setCurrentPath]);
+  useLastPath();
 
-  useEffect(() => {
-    localStorage.setItem("currentPath", currentPath);
-  }, [currentPath]);
-
+  console.log(backStack, forwardStack); // Debugging output
+  
   return (
     <div className="flex items-center justify-between w-full h-full gap-4 p-2">
-      {/* Current Path Input with Refresh */}
-      <div className="relative flex items-center h-[32px] flex-grow max-w-[400px] border border-gray-500 rounded px-2">
-        <input
-          className="flex-grow outline-none bg-transparent text-sm"
-          type="text"
-          value={currentPath}
-          onChange={(e) => setCurrentPath(e.target.value)}
-          onFocus={(e) => {
-            const val = e.target.value;
-            e.target.setSelectionRange(val.length, val.length);
-          }}
+      <div className="flex flex-row p-2 h-full gap-4 items-center">
+        <RiArrowLeftSLine className={`text-3xl rounded transition-all duration-200 
+          ${backStack.length === 0 
+            ? 'opacity-30 cursor-not-allowed' 
+            : 'cursor-pointer hover:bg-white/20'}
+        `}
+          onClick={() => goBack()}
         />
-        <MdSearch className="ml-2 text-lg cursor-pointer text-gray-400 hover:text-gray-200" onClick={() => setCurrentPath(currentPath)} />
-
-        <div className="
-          absolute left-full translate-x-2
-          flex flex-row items-center gap-2
-          w-auto max-w-[200px] px-2 py-1
-          bg-[#181818] rounded
-        ">
-          <MdRefresh className="text-sm cursor-pointer hover:text-gray-200" onClick={() => window.location.reload()}/>
-        </div>
+        <RiArrowRightSLine className={`text-3xl rounded transition-all duration-200 
+          ${forwardStack.length === 0 
+            ? 'opacity-30 cursor-not-allowed' 
+            : 'cursor-pointer hover:bg-white/20'}
+        `}
+          onClick={() => goForward()}
+        />
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center h-[32px] flex-grow max-w-[300px] border border-gray-500 rounded px-2 bg-transparent">
-        <input
-          className="flex-grow outline-none bg-transparent text-sm"
-          type="text"
-          placeholder="Search..."
-        />
-        <MdSearch className="ml-2 text-lg cursor-pointer text-gray-400 hover:text-gray-200" />
-      </div>
+      <PathSearch />
+     
+
+      <SearchBar />
+     
     </div>
   );
+}
+
+export function SearchBar() {
+  return (
+    <div className="flex items-center h-[32px] flex-grow max-w-[300px] border border-gray-500 rounded px-2 bg-transparent">
+      <input
+        className="flex-grow outline-none bg-transparent text-sm"
+        type="text"
+        placeholder="Search..."
+      />
+      <MdSearch className="ml-2 text-lg cursor-pointer text-gray-400 hover:text-gray-200" />
+    </div>
+  )
+   
+}
+
+export function PathSearch() {
+  const { currentPath, setCurrentPath, navigateTo } = useFileExplorer();
+  const [inputPath, setInputPath] = useState('');
+
+
+  useEffect(() => {
+    setInputPath(currentPath);
+  }, [currentPath])
+
+  return (
+    <div className="relative flex items-center h-[32px] flex-grow max-w-[400px] border border-gray-500 rounded px-2">
+      <input
+        className="flex-grow outline-none bg-transparent text-sm"
+        type="text"
+        value={inputPath}
+        onChange={(e) => setInputPath(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            navigateTo(inputPath);
+          }
+        }}
+        onFocus={(e) => {
+          const val = e.target.value;
+          e.target.setSelectionRange(val.length, val.length);
+        }}
+      />
+      <MdSearch className="ml-2 text-lg cursor-pointer text-gray-400 hover:text-gray-200" onClick={() => setCurrentPath(currentPath)} />
+    </div>
+  )
+  
 }
 
 export function LayoutToggle() {
@@ -137,20 +168,23 @@ export function LayoutToggle() {
 export function FiltersBar() {
   return (
     <div className="sticky top-0 p-2 pb-0 h-12 flex items-center">
-      <span className="text-xs text-blue-500 whitespace-nowrap bg-[#181818] p-2 mr-auto rounded-lg">
+      <span className="flex items-center text-xs text-blue-500 whitespace-nowrap bg-[#181818] p-2 rounded-lg">
         Last updated: {new Date().toLocaleDateString('en-US')}{' '}
         {new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: true, // optional: true for AM/PM, false for 24h
+            hour12: true,
         })}
+        
       </span>
-      <LayoutToggle />
+      <span className="p-1 rounded ml-1 mr-auto hover:bg-white/20 cursor-pointer">
+        <MdRefresh className="text-xl" />
+      </span>
      
-    
+      <LayoutToggle />
+  
       <LiaFilterSolid className="text-gray-500 text-xl mr-2" />
     </div>
-
   )
 }
 

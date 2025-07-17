@@ -6,6 +6,34 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "fs:default",
+    "fs:read-all",
+    "fs:write-all",
+    "fs:allow-rename",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
+    "fs:allow-watch",
+    "fs:read-dirs",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "**/*",
+        "**/.*"
+      ]
+    },
+    {
+      "identifier": "core:path:allow-basename"
+    },
+    "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$DOWNLOAD" },
+        { "path": "$HOME/Downloads" },  
+        { "path": "**/*" },
+        { "path": "**/.*" }           
+      ]
+    }
   ]
 }

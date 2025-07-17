@@ -90,6 +90,8 @@ func Download() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		filePath := r.URL.Query().Get("path")
 
+		log.Println("Download file path:", filePath)
+
 		if filePath == "" {
 			http.Error(w, "File path is required", http.StatusBadRequest)
 			return
@@ -108,6 +110,13 @@ func Download() http.HandlerFunc {
 			http.Error(w, "Failed to get file info", http.StatusInternalServerError)
 			return
 		}
+
+		if os.IsPermission(err) {
+			http.Error(w, "Permission denied", http.StatusForbidden)
+			return
+		}
+
+		
 
 		// Set headers to trigger download
 		w.Header().Set("Content-Disposition", "attachment; filename=\""+info.Name()+"\"")
