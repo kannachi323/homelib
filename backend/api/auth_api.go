@@ -6,18 +6,20 @@ import (
 	"homelib/utils"
 	"log"
 	"net/http"
+	"time"
 )
 
 
 type SignUpRequest struct {
+	Name  string `json:"name"`
 	Email string `json:"email"`
 	Password string `json:"password"`
-	// more fields later...
 }
 
 type LogInRequest struct {
 	Email string `json:"email"`
 	Password string `json:"password"`
+	RememberMe bool `json:"remember_me"`
 }
 
 
@@ -31,7 +33,7 @@ func SignUp(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		err = db.CreateUser(req.Email, req.Password)
+		err = db.CreateUser(req.Name, req.Email, req.Password)
 		if err != nil {
 			log.Println(err.Error())
 			if err.Error() == "user already exists" {
@@ -56,22 +58,34 @@ func LogIn(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		id, err := db.GetUserByEmailPassword(req.Email, req.Password)
+		id, err := db.CheckUser(req.Email, req.Password)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
 
-		token, err := utils.GenerateAccessJWT(id)
-
+		accessToken, err := utils.GenerateAccessJWT(id)
 		if err != nil {
 			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 			return
 		}
 
+		refreshToken, err := utils.GenerateRefreshJWT(id)
+		if err != nil {
+			http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
+			return
+		}
+		
+		var expiresAt time.Time
+		if req.RememberMe {
+			expiresAt = time.Now().Add(365 * 24 * time.Hour)
+		} else {
+			expiresAt = time.Now().Add(30 * 24 * time.Hour)
+		}
+
 		http.SetCookie(w, &http.Cookie{
 			Name:     "access_token",
-			Value:    token,
+			Value:    accessToken,
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   false, //MUST SET TO TRUE IN PRODUCTION
@@ -79,14 +93,16 @@ func LogIn(db *db.Database) http.HandlerFunc {
 			MaxAge:   3600,
 		})
 
+		refreshMaxAge := int(time.Until(expiresAt).Seconds())
+
 		http.SetCookie(w, &http.Cookie{
 			Name: "refresh_token",
-			Value: "token",
+			Value: refreshToken,
 			Path: "/",
 			HttpOnly: true,
 			Secure: false, //MUST SET TO TRUE IN PRODUCTION
 			SameSite: http.SameSiteLaxMode,
-			MaxAge: 3600 * 24 * 30, // 30 days
+			MaxAge: refreshMaxAge,
 		})
 		w.WriteHeader(http.StatusOK)
 	}

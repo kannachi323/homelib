@@ -1,24 +1,38 @@
 
 
 
-import { Outlet } from "react-router"; // ✅ Use react-router-dom!
-import { useState } from "react";
-
-
+import { Outlet, useNavigate } from "react-router";
+import { useState, useEffect } from "react";
 
 import { DiskProvider } from "./contexts/DiskProvider";
 import { FileExplorerProvider } from "./contexts/FileExplorerProvider";
 import { Menu } from "./ui/Menu";
 import { FileExplorer } from "./ui/FileExplorer";
-
+import { useAuthContext } from "./hooks/useAuthContext";
 
 function App() {
   const [isOpen, setIsOpen] = useState(false);
 
+  const { isAuthenticated, setAuthChecked, authChecked } = useAuthContext();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setAuthChecked(false);
+      navigate('/auth');
+    }
+  }, [setAuthChecked, isAuthenticated, navigate]);
+
+  if (!authChecked) {
+    return null;
+  }
+  
+
   return (
-    <div className="flex flex-row w-screen h-screen">
-      <DiskProvider>
-        <FileExplorerProvider>
+    <DiskProvider>
+      <FileExplorerProvider>
+        <div className="flex flex-row w-screen h-screen">
+      
           {/* Sidebar */}
           <aside
             className={`
@@ -42,13 +56,9 @@ function App() {
               <Outlet />
             </main>
           </div>
-  
-        </FileExplorerProvider>
-
-
-
-      </DiskProvider>
-    </div>
+        </div>
+      </FileExplorerProvider>
+    </DiskProvider>
         
   );
 }

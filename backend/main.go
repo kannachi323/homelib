@@ -10,10 +10,12 @@ import (
 func main() {
 	godotenv.Load(".env")
 	s := server.CreateServer()
-
-	s.MountHandlers()
+	defer s.DB.Stop()
 
 	http.ListenAndServe(":8080", s.Router)
+
+
+	
 
 }
 

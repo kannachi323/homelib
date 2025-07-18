@@ -5,7 +5,7 @@ import { UtilsTray } from "./UtilsTray";
 
 export function Menu({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
   return (
-    <div className="flex flex-col items-center w-full h-full p-2">
+    <div className="flex flex-col items-center w-full h-full p-1">
       <AppLogo isOpen={isOpen} setIsOpen={setIsOpen} />
       
       <UtilsTray isOpen={isOpen}/>

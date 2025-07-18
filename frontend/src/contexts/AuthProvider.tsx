@@ -1,52 +1,39 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router";
+
 import { AuthContext } from "./AuthContext";
 
-const protectedRoutes = ["/play"];
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<{ id: string; username: string } | null>(null);
-  const [authChecked, setAuthChecked] = useState<boolean>(false);
- 
+  const [authChecked, setAuthChecked] = useState(false);
+
+
   useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await fetch("http://localhost:8080/check-auth", {
-          method: "GET",
-          credentials: "include",
-        });
+    async function checkUser() {
+      console.log("Checking user authentication...");
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${apiUrl}/user`, {
+        method: "GET",
+        credentials: 'include',
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          setUser({ id: data.id, username: data.username });
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-          navigate("/signup");
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
+      if (res.ok) {
+        const data = await res.json();
+        setIsAuthenticated(true);
+        setUser({ id: data.id, username: data.username });
+      } else {
         setIsAuthenticated(false);
-        navigate("/signup");
-      } finally {
-        setAuthChecked(true);
+        setUser(null);
       }
+      setAuthChecked(true);
     }
-  
-  if (protectedRoutes.includes(location.pathname)) {
-    checkAuth();
-  }
-  }, [location.pathname, navigate]);
-
+ 
+    checkUser();
+  }, [])
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, setIsAuthenticated, 
-        user, setUser, authChecked, setAuthChecked}}
+      value={{ isAuthenticated, setIsAuthenticated, user, setUser, authChecked, setAuthChecked }}
     >
       {children}
     </AuthContext.Provider>
