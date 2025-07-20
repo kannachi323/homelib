@@ -16,7 +16,7 @@ export default function Auth() {
     if (authChecked && isAuthenticated) {
       navigate("/");
     }
-  }, [authChecked, isAuthenticated, navigate])
+  }, [authChecked, isAuthenticated, navigate]);
 
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-10">

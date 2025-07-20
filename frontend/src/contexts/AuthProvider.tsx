@@ -10,22 +10,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     async function checkUser() {
-      console.log("Checking user authentication...");
-      const apiUrl = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${apiUrl}/user`, {
-        method: "GET",
-        credentials: 'include',
-      });
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL;
+        const res = await fetch(`${apiUrl}/user`, {
+          method: "GET",
+          credentials: 'include',
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        setIsAuthenticated(true);
-        setUser({ id: data.id, username: data.username });
-      } else {
+        if (res.ok) {
+          const data = await res.json();
+          setIsAuthenticated(true);
+          setUser({ id: data.id, username: data.username });
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error checking user authentication:", error);
         setIsAuthenticated(false);
         setUser(null);
+      } finally {
+        setAuthChecked(true);
       }
-      setAuthChecked(true);
+      
+      
     }
  
     checkUser();
