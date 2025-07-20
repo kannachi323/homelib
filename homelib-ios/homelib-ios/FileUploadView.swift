@@ -7,7 +7,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
+struct FileUploadView: View {
     @State private var showingFileImporter = false
     @State private var selectedFileURL: URL?
 
@@ -52,8 +52,8 @@ struct ContentView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
+struct FileUploadView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        FileUploadView()
     }
 }
