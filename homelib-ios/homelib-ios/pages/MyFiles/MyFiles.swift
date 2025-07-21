@@ -9,6 +9,6 @@ import SwiftUI
 
 struct MyFilesView : View {
     var body : some View {
-        
+        Text("these are your files :)")
     }
 }

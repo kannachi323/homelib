@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppTab {
-    case home, files, account
+    case home, groups, files, account
 }
 
 struct AppLayoutView : View {
@@ -11,25 +11,39 @@ struct AppLayoutView : View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-
                 TabView(selection: $selectedTab) {
                     HomeView()
                         .tag(AppTab.home)
                         .tabItem {
-                            Label("", systemImage: "house")
+                            Label("", systemImage: selectedTab == .home ?
+                                  "house.fill" : "house")
+                        }
+                
+                    GroupsView()
+                        .tag(AppTab.groups)
+                        .tabItem {
+                            Label("", systemImage: selectedTab == .groups ? "person.3.fill" : "person.3")
                         }
 
                     MyFilesView()
                         .tag(AppTab.files)
                         .tabItem {
-                            Label("", systemImage: "folder")
+                            Label("", systemImage: selectedTab == .files ?
+                                  "folder.fill" : "folder")
                         }
+                
+                   
+                    
 
                     AccountView()
                         .tag(AppTab.account)
                         .tabItem {
-                            Label("", systemImage: "person.circle")
+                            Label("", systemImage: selectedTab == .account ?
+                                  "person.fill" : "person")
                         }
+                    
+                   
+                    
                 }
             }
             .navigationTitle(tabTitle(for: selectedTab))
@@ -42,6 +56,7 @@ struct AppLayoutView : View {
         case .home: return "Home"
         case .files: return "My Files"
         case .account: return "Account"
+        case .groups: return "Groups"
         }
     }
 }   

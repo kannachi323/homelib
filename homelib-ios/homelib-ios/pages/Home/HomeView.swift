@@ -10,11 +10,13 @@ import Foundation
 import Combine
 
 struct HomeView: View {
+    @State private var searchText : String = ""
     @StateObject private var viewModel = HomeViewModel()
 
     var body: some View {
-        
         VStack(alignment: .leading, spacing: 16) {
+            SearchBarView(searchText: $searchText)
+            
             HomeDropdownView()
          
             if let error = viewModel.errorMessage {
@@ -22,7 +24,7 @@ struct HomeView: View {
                     .foregroundColor(.red)
             }
             
-            FileGridView(files: viewModel.files)
+            FileGridView(viewModel: viewModel)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

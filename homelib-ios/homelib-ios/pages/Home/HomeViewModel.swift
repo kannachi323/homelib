@@ -23,10 +23,10 @@ class HomeViewModel: ObservableObject {
     @Published var files: [FileItem] = []
     @Published var errorMessage: String?
     
-    @State var currentPath: String = "/"
+    @Published var currentPath: String = ""
 
     func fetchFiles() {
-        guard let url = URL(string: "http://localhost:8080/files?path=\(currentPath)") else {
+        guard let url = URL(string: "http://localhost:8080/files?path=/\(currentPath)") else {
             errorMessage = "Invalid URL"
             return
         }
