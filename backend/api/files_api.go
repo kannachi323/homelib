@@ -12,6 +12,7 @@ import (
 )
 
 type FileNode struct {
+	FileId string `json:"fileId"`
 	Name string `json:"name"`
 	Path string `json:"path"`
 	Size int64  `json:"size"`
@@ -58,7 +59,7 @@ func ListFiles() http.HandlerFunc {
 		} else {
 			path = os.Getenv("BASE_URL")
 		}
-
+		log.Println("Listing files in path:", path)
 		files, err := os.ReadDir(path)
 		if err != nil {
 			http.Error(w, "Failed to read files", http.StatusInternalServerError)
@@ -73,6 +74,7 @@ func ListFiles() http.HandlerFunc {
 				return
 			}
 			fileNode := FileNode{
+				FileId: fileInfo.Name(),
 				Name: fileInfo.Name(),
 				Path: filepath.Join(path, fileInfo.Name()),
 				IsDir: fileInfo.IsDir(),

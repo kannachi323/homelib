@@ -43,6 +43,14 @@ struct FileUploadView: View {
             .disabled(selectedFileURL == nil)
         }
         .padding()
+        .toolbar() {
+            ToolbarItem(placement: .principal) {
+                Text("Files")
+                    .font(.title)
+                    .bold()
+                    .foregroundColor(.white)
+            }
+        }
     }
 
     func uploadFile() {
