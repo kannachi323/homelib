@@ -19,8 +19,9 @@ struct MyFilesView : View {
                     
  
                 SearchBarView(searchText: $searchText, isOpen: $isOpen)
+
                   
-                
+                MyFilesFilterView(viewModel: fileGridViewModel)
                 
                 
                 FileGridView(viewModel: fileGridViewModel)
@@ -34,45 +35,124 @@ struct MyFilesView : View {
     }
 }
 
+struct MyFilesFilterView: View {
+    @ObservedObject var viewModel: FileGridViewModel
+    @State var inc : Bool = true
+    
+    var body: some View {
+        HStack() {
+            HStack(spacing: 10) {
+                Menu {
+                    Button("Sort by Name") {
+                        viewModel.sortFilesByName(inc: inc)
+                    }
+                    Button("Sort by Size") {
+                           viewModel.sortFilesBySize(inc: inc)
+                    }
+
+                    Button("Clear Filters") {
+                        viewModel.clearFilters()
+                    }
+                    
+                } label: {
+                    Text(viewModel.filterTag.rawValue)
+                        .font(.headline)
+                  
+                }
+                .foregroundColor(.white)
+                
+                Image(systemName: inc ? "arrowtriangle.up" : "arrowtriangle.down")
+                    .font(.title2)
+                    .imageScale(.small)
+                    .onTapGesture {
+                        inc.toggle()
+                        viewModel.updateFilters(inc: inc)
+                    }
+                    
+            }
+            
+            Spacer()
+            
+            
+            Menu {
+                Section(header: Text("File Type")) {
+                    Button("Folders") {
+                        viewModel.filterFoldersOnly()
+                    }
+                    Button("Photos (.jpg, .png, etc.)") {
+                        viewModel.sortFilesByName(inc: true)
+                    }
+                    Button("Videos (.mp4, .mov, etc.)") {
+                        viewModel.sortFilesBySize(inc: true)
+                    }
+                    
+                    Button("Other (custom types)") {
+                        viewModel.sortFilesByName(inc: true)
+                    }
+                }
+                
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                
+              
+            }
+            .foregroundColor(.white)
+            .font(.title2)
+            .imageScale(.medium)
+        }
+        .padding()
+       
+    }
+}
+
+
 struct MyFilesNavView: View {
     @ObservedObject var viewModel: FileGridViewModel
     
     var body: some View {
+        
         ZStack {
-            // Centered title
-            Text(viewModel.getDirectory() == nil ? "Files" : "")
-                .font(.title)
-                .bold()
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Left-aligned back button with optional directory name
-            HStack(spacing: 15) {
-                if viewModel.getDirectory() != nil {
+            HStack {
+                if let dir = viewModel.getDirectory() {
                     Image(systemName: "chevron.left")
                         .font(.title)
                         .bold()
-
-                    Text(viewModel.getDirectory()!)
+                        .onTapGesture {
+                            viewModel.fetchFiles(path: viewModel.goBack())
+                        }
+                    Text(dir)
                         .font(.title)
                         .bold()
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } else {
+                    Text("Files")
+                        .font(.largeTitle)
+                        .bold()
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                
+                Spacer()
+                
+                // Right side icons
+                HStack(spacing: 15) {
+                    Image(systemName: "arrow.up.document")
+                        .font(.title2)
+                        .imageScale(.large)
+                    
+                    Image(systemName: "checkmark.square")
+                        .font(.title2)
+                        .imageScale(.large)
+                    
+                    Image(systemName: "ellipsis.circle")
+                        .font(.title2)
+                        .imageScale(.large)
                 }
             }
-            .onTapGesture {
-                viewModel.fetchFiles(path: viewModel.goBack())
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            
-            HStack(spacing: 10) {
-                Image(systemName: "arrow.up.document")
-                    .font(.title2)
-                Image(systemName: "checkmark.square")
-                    .font(.title2)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal)
+            .frame(height: 45)
         }
-        .padding(.horizontal)
-        .frame(height: 45)
     }
 }
 

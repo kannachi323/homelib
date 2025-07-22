@@ -19,14 +19,22 @@ struct FileItem: Identifiable, Decodable {
     var id: String { fileId }
 }
 
+enum FilterTag : String, CaseIterable {
+    case sortByName = "Name"
+    case sortBySize = "Size"
+}
+
 
 class FileGridViewModel: ObservableObject {
     @Published var files: [FileItem] = []
+    private var ogFiles : [FileItem] = []
     
     @Published var showError = false
     @Published var errorMessage: String?
     
     @Published var currentPath: String = ""
+    
+    @Published var filterTag: FilterTag = .sortByName
 
     func fetchFiles(path: String) {
         guard let url = URL(string: "http://localhost:8080/files?path=/\(path)") else {
@@ -54,6 +62,7 @@ class FileGridViewModel: ObservableObject {
                 let decodedFiles = try JSONDecoder().decode([FileItem].self, from: data)
                 DispatchQueue.main.async {
                     self.files = decodedFiles
+                    self.ogFiles = decodedFiles
                 }
             } catch {
                 DispatchQueue.main.async {
@@ -76,6 +85,56 @@ class FileGridViewModel: ObservableObject {
         }
         
         return URL(fileURLWithPath: self.currentPath).lastPathComponent
+    }
+    
+    func sortFilesByName(inc: Bool) {
+        filterTag = .sortByName
+        if inc {
+            files.sort {
+                $0.name.localizedCompare($1.name) == .orderedAscending
+            }
+        } else {
+            files.sort {
+                $0.name.localizedCompare($1.name) == .orderedDescending
+            }
+        }
+        
+    }
+    
+    func sortFilesBySize(inc: Bool) {
+        filterTag = .sortBySize
+        if (inc) {
+            files.sort {
+                $0.size < $1.size
+            }
+        } else {
+            files.sort {
+                $0.size > $1.size
+            }
+        }
+        
+    }
+    
+    func filterFoldersOnly() {
+        files = files.filter {
+            $0.isDir == true
+        }
+    }
+    
+    func updateFilters(inc: Bool) {
+        
+        print(self.filterTag)
+        
+        switch self.filterTag {
+            case .sortByName:
+                self.sortFilesByName(inc: inc)
+            case .sortBySize:
+                self.sortFilesBySize(inc: inc)
+        }
+    }
+ 
+    func clearFilters() {
+        files = ogFiles
     }
     
     func triggerError(errorMessage : String) {

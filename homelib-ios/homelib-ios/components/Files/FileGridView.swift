@@ -39,7 +39,6 @@ struct FileGridView: View {
                       }
                 }
             }
-            .padding(5)
         }
     }
 }
