@@ -1,13 +1,15 @@
 //
-//  ContentView.swift
+//  UploadStatusView.swift
 //  homelib-ios
 //
-//  Created by Matthew Chen on 7/19/25.
+//  Created by Matthew Chen on 7/21/25.
 //
+
+
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct FileUploadView: View {
+struct UploadFileView: View {
     @State private var showingFileImporter = false
     @State private var selectedFileURL: URL?
 
@@ -51,6 +53,7 @@ struct FileUploadView: View {
                     .foregroundColor(.white)
             }
         }
+        .preferredColorScheme(.dark)
     }
 
     func uploadFile() {
@@ -60,8 +63,6 @@ struct FileUploadView: View {
     }
 }
 
-struct FileUploadView_Previews: PreviewProvider {
-    static var previews: some View {
-        FileUploadView()
-    }
+#Preview {
+    UploadFileView()
 }

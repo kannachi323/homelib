@@ -11,6 +11,7 @@ struct DrawerView : View {
     @Binding var isOpen : Bool
     
     var body : some View {
+        
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 DrawerItem(iconName: "folder", title: "My Folder") {
@@ -31,8 +32,7 @@ struct DrawerView : View {
         }
         .padding(.top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .edgesIgnoringSafeArea(.horizontal)
-        
+        .background(.black)
     }
 }
 
@@ -49,6 +49,5 @@ struct DrawerItem : View {
             }
         }
         .padding()
-        .hoverEffect().background(Color.white)
     }
 }

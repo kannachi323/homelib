@@ -11,26 +11,46 @@ import Combine
 
 struct HomeView: View {
     @State private var searchText : String = ""
-    @StateObject private var viewModel = HomeViewModel()
+    @State private var isDrawerOpen: Bool = false
+    @StateObject private var viewModel = FileGridViewModel()
+    
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SearchBarView(searchText: $searchText)
-            
-            HomeDropdownView()
-         
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
+        ZStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("HomeLib")
+                    .font(.title)
+                    .bold()
+                
+                SearchBarView(searchText: $searchText, isOpen: $isDrawerOpen)
+                
+                HomeDropdownView()
+                
+                FileGridView(viewModel: viewModel)
             }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .alert(isPresented: $viewModel.showError) {
+                Alert(
+                    title: Text("Something went wrong"),
+                    message: Text(viewModel.errorMessage ?? "Unknown error"),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+            .onAppear {
+                viewModel.fetchFiles(path: "/")
+            }
+            .zIndex(0)
             
-            FileGridView(viewModel: viewModel)
+            VStack(alignment: .leading) {
+                if (isDrawerOpen) {
+                    DrawerView(isOpen: $isDrawerOpen)
+                }
+            }
+            .frame(maxWidth: 250)
+            .zIndex(10)
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear {
-            viewModel.fetchFiles()
-        }
+       
     }
 }
 

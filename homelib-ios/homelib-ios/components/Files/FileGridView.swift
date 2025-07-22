@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct FileGridView: View {
-    @ObservedObject var viewModel: HomeViewModel
+    @ObservedObject var viewModel: FileGridViewModel
     
     let columns = [
         GridItem(.flexible()),
@@ -16,13 +16,13 @@ struct FileGridView: View {
     ]
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
+            LazyVGrid(columns: columns, spacing: 30) {
                 ForEach(viewModel.files) { file in
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Image(systemName: file.isDir ? "folder.fill" : "doc.fill")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 40, height: 40)
+                            .frame(maxWidth: 64, maxHeight: 64)
                             .foregroundColor(file.isDir ? .yellow : .blue)
                         
                         Text(file.name)
@@ -33,15 +33,22 @@ struct FileGridView: View {
                     .onTapGesture {
                         if (file.isDir) {
                             viewModel.currentPath = file.path
-                            viewModel.fetchFiles()
+                            viewModel.fetchFiles(path: viewModel.currentPath)
                         }
                         
                       }
                 }
             }
-            .padding()
+            .padding(5)
         }
     }
 }
+
+#Preview {
+    let viewModel = FileGridViewModel()
+    viewModel.fetchFiles(path: "/")
+    return FileGridView(viewModel: viewModel)
+}
+
 
 
