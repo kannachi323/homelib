@@ -10,7 +10,7 @@ export default function Auth() {
   const isLandingPage = location.pathname === "/auth";
 
   const { authChecked, isAuthenticated } = useAuthContext();
-  
+
 
   useEffect(() => {
     if (authChecked && isAuthenticated) {

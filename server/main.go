@@ -1,7 +1,7 @@
 package main
 
 import (
-	"homelib/server"
+	"log"
 	"net/http"
 
 	"github.com/joho/godotenv"
@@ -9,8 +9,10 @@ import (
 
 func main() {
 	godotenv.Load(".env")
-	s := server.CreateServer()
+	s := CreateServer()
 	defer s.DB.Stop()
+
+	log.Println("Starting server on :8080")
 
 	http.ListenAndServe(":8080", s.Router)
 

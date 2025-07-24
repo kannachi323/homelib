@@ -20,6 +20,8 @@ type Database struct {
 func (db *Database) Start() error {
 	dsn := os.Getenv("DATABASE_URL")
 
+	log.Println("Connecting to SQLite database at:", dsn)
+
 	sqliteDB, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to open SQLite DB: %w", err)
