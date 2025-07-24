@@ -1,14 +1,15 @@
 package main
 
-
 import (
-	"log"
+	"net/http"
 )
 
 func main() {
+	p := CreateProxy()
 
-	"i
+	p.MountHandlers()
 
 
-
+	
+	http.ListenAndServe(":8000", p.Router)
 }
