@@ -1,6 +1,7 @@
 import { type File } from "../contexts/FileExplorerContext";
 import { writeFile } from '@tauri-apps/plugin-fs';
 import { basename } from "@tauri-apps/api/path";
+import { platform } from '@tauri-apps/plugin-os';
 
 export async function fetchFiles(setFiles : (files: File[]) => void, path : string) {
   try {
@@ -40,9 +41,10 @@ export async function downloadFile(filePath: string) : Promise<string> {
     const data = new Uint8Array(await blob.arrayBuffer());
 
     const fileName = await basename(filePath);
-    const downloadPath = `${import.meta.env.VITE_DOWNLOAD_DIR}/${fileName}`;
-
-
+    const downloadPath = await encodePathWithOS(`homelib/.local/Downloads/${fileName}`);
+    
+    console.log("Writing file to:", downloadPath);
+    
     await writeFile(downloadPath, data);
 
     return downloadPath;
@@ -51,4 +53,18 @@ export async function downloadFile(filePath: string) : Promise<string> {
     console.error("Error downloading file:", error);
     throw error;
   }
+}
+
+export async function encodePathWithOS(inputPath: string): Promise<string> {
+  const os = await platform();
+
+  if (os === 'windows') {
+    const normalized = inputPath.replace(/\\/g, '/');
+    if (!normalized.match(/^[a-zA-Z]:\//)) {
+      return `C:/${normalized}`;
+    }
+    return normalized;
+  }
+
+  return inputPath;
 }

@@ -17,35 +17,41 @@ export default function Home() {
       //remember what path i was on last when component was mounted
       const lastPath = localStorage.getItem('lastPath');
       if (lastPath) {
-        startAt(null);
+        startAt(lastPath);
 
       } else {
-        startAt('/');
+        startAt('/homelib');
       }
   
     }, [startAt])
 
   async function handleFileClick(file: File) {
-    let downloadPath = `${import.meta.env.VITE_DOWNLOAD_DIR}/${file.name}`;
+    //this is local download path
+    let localDownloadPath = `homelib/local/Downloads/${file.name}`;
+    
     if (file.isDir) {
       navigateTo(file.path);
-    } else {
-      try {
-        const fileExists = await exists(downloadPath);
-        
-        if (!fileExists) {
-          console.log('trying to download');
-          downloadPath = await downloadFile(file.path);
-        }
-
-        console.log("got here");
-
-        await openPath(downloadPath);
-
-      } catch (error) {
-        console.error("Error opening file:", error);
-      }
+      return;
     }
+
+
+    try {
+      const fileExists = await exists(localDownloadPath);
+      
+      if (!fileExists) {
+        console.log('trying to download');
+        localDownloadPath = await downloadFile(file.path);
+      }
+
+      console.log("got here");
+
+      await openPath(localDownloadPath);
+
+    } catch (error) {
+      console.error("Error opening file:", error);
+    }
+    
+
   }
 
   const { createClientConnection } = useClient();

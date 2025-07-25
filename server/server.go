@@ -43,7 +43,6 @@ func (s *Server) MountHandlers() {
 		AllowCredentials: true,
 	}))
 
-
 	s.Router.Post("/file", api.Upload())
 	s.Router.Get("/file", api.Download())
 	s.Router.Get("/files-zip", api.DownloadZip())
@@ -55,8 +54,9 @@ func (s *Server) MountHandlers() {
 	s.Router.Post("/login", api.LogIn(s.DB))
 
 
-	//user stuff
 	s.Router.With(middleware.AuthMiddleware).Get("/user", api.GetUser(s.DB))
+
+
 	
 	
 }

@@ -29,11 +29,20 @@
     {
       "identifier": "opener:allow-open-path",
       "allow": [
-        { "path": "$DOWNLOAD" },
-        { "path": "$HOME/Downloads" },  
-        { "path": "**/*" },
-        { "path": "**/.*" }           
+        {
+          "path": "$DOWNLOAD"
+        },
+        {
+          "path": "$HOME/Downloads"
+        },
+        {
+          "path": "**/*"
+        },
+        {
+          "path": "**/.*"
+        }
       ]
-    }
+    },
+    "os:default"
   ]
 }

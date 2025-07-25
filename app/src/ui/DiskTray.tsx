@@ -20,7 +20,7 @@ export function DiskTray({isOpen} : {isOpen: boolean}) {
 
   function handleDiskSelect(disk: Disk) {
     setCurrentDisk(disk);
-    setCurrentPath(`/homelib${disk.device}`);
+    setCurrentPath(`${disk.device}/homelib/`);
     navigate('/')
 
   }

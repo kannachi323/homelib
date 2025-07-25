@@ -40,6 +40,8 @@ func (p *Proxy) MountHandlers() {
 	p.Router.Get("/ipify", api.GetPublicIP())
 	p.Router.Get("/pub", api.PubToChannel())
 	p.Router.Get("/sub", api.SubToChannel())
+
+	
 }
 
 

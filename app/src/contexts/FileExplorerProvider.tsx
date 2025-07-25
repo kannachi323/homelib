@@ -14,16 +14,9 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
   const [forwardStack, setForwardStack] = useState<string[]>([]);
 
   const startAt = useCallback((path: string | null) => {
-    if (!path) {
-      const lastPath = localStorage.getItem('lastPath');
-      if (lastPath) {
-        setCurrentPath(lastPath);
-      } else {
-        setCurrentPath('/');
-      }
-    } else {
-      setCurrentPath(path);
-    }
+   
+    setCurrentPath(path || '/homelib');
+    
 
     const forwardStack = localStorage.getItem('forwardStack');
     if (forwardStack) {
