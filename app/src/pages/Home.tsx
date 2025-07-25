@@ -2,17 +2,15 @@ import { useEffect } from "react";
 import { exists } from '@tauri-apps/plugin-fs';
 import { openPath } from "@tauri-apps/plugin-opener";
 
-
-
-
 import { downloadFile } from "../utils/files";
 import { useFileExplorer } from "../hooks/useFileExplorer";
+import { useClient } from "../hooks/useClient";
 import { FiltersBar } from "../ui/FileExplorer";
 import { type File } from "../contexts/FileExplorerContext";
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
 
-export default function Files() {
+export default function Home() {
   const { files, startAt, navigateTo  } = useFileExplorer();
 
   useEffect(() => {
@@ -50,6 +48,8 @@ export default function Files() {
     }
   }
 
+  const { createClientConnection } = useClient();
+
   return (
     <div className="flex flex-col h-full max-h-screen">
       <div className="relative flex-grow overflow-auto">
@@ -64,6 +64,7 @@ export default function Files() {
             </div>
           ))}
         </div>
+        <button onClick={() => createClientConnection()}>connect to services</button>
       </div>
     </div>
 

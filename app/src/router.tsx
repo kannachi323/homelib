@@ -1,8 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 
 import App from './App';
-import Files from './pages/Files';
+import Home from './pages/Home';
 import DiskScan from './pages/DiskScan'
+import DeviceScan from './pages/DeviceScan';
 import Auth from './pages/Auth';
 import LogIn from './pages/Auth/Login';
 import SignUp from './pages/Auth/Signup';
@@ -12,8 +13,9 @@ export const router = createBrowserRouter([
         path: "/",
         element: <App />,
         children: [
-            {index: true, element: <Files />},
-            {path: "disk-scan", element: <DiskScan />}
+            {index: true, element: <Home />},
+            {path: "disk-scan", element: <DiskScan />},
+            {path: "device-scan", element: <DeviceScan />},
         ]
     },
     {

@@ -85,7 +85,7 @@ export function DiskScannerScanDisks() {
   )
 }
 
-export function DiskScannerView() {
+export function DiskScannerResults() {
   const { disks, setScanStep, setDisks } = useDisk();
   const [selectedDisks, setSelectedDisks] = useState<Set<string>>(new Set());
 

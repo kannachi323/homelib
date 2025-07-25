@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"proxy/core"
@@ -16,7 +17,7 @@ var upgrader = websocket.Upgrader {
 	},
 }
 
-func CreateConn(cm *manager.ChannelManager) http.HandlerFunc {
+func CreateConn(cm *manager.ClientManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Upgrade HTTP to WebSocket
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -24,15 +25,35 @@ func CreateConn(cm *manager.ChannelManager) http.HandlerFunc {
 			log.Println("WebSocket upgrade error:", err)
 			return
 		}
-		defer conn.Close()
 
+		var data core.ClientRequest
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Println(data)
+		
 		clientID := uuid.NewString()
 		client := core.NewClient(clientID, "anonymous", conn)
 		log.Printf("New client connected: %s", clientID)
 
-		cm.AddClientToChannel(client, "system")
-
+		cm.AddChannelToClient(clientID, "system")
+		cm.ChannelManager.AddClientToChannel(client, "system")
 		
-		go client.WriteData()
+		client.StartReader()
+		client.StartWriter()
+
+		channel, err := cm.ChannelManager.GetChannel("as")
+		if err != nil {
+			log.Printf("Error getting channel: %v", err)
+			return
+		}
+
+		res := &core.ServerResponse{
+			Channel: "adf",
+			Message: "You are now connected",
+		}
+		channel.Broadcast(res)
 	}
 }

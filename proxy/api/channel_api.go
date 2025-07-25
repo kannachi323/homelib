@@ -16,7 +16,6 @@ func PubToChannel() http.HandlerFunc {
     ctx := context.Background()
     rdb := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 
-
     go func() {
       channel := "proxy:events"
       for i := 1; i <= 5; i++ {

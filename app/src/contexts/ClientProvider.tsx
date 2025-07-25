@@ -1,19 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-import { WebSocketContext, type Channel } from "./WebSocketContext";
+import { ClientContext, type Channel, type Device } from "./ClientContext";
 
-
-
-export function WebSocketProvider({ children }: { children: React.ReactNode }) {
+export function ClientProvider({ children }: { children: React.ReactNode }) {
   const [channels, setChannels] = useState<Record<string, Channel>>({});
   const [conn, setConn] = useState<WebSocket | null>(null);
+  const [clientDevices, setClientDevices] = useState<Device[]>([]);
 
-  useEffect(() => {
-    const websocket = new WebSocket("ws://localhost:8080/ws");
+  function createClientConnection() {
+    if (conn) {
+      console.warn("WebSocket connection already exists");
+      return;
+    }
+    const websocket = new WebSocket("ws://localhost:8000/ws");
     websocket.onopen = () => {
       sendMessage("system", "Connected to WebSocket server");
     };
-  })
+
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received message:", data);
+    }
+
+    websocket.onclose = () => {
+      console.log("WebSocket connection closed");
+    };
+
+    setConn(websocket);
+  }
 
   function subscribeToChannel(channelName: string) {
     setChannels((channels) => ({
@@ -46,12 +60,12 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   
 
   return (
-    <WebSocketContext.Provider value={{
-      channels, setChannels, conn, setConn,
+    <ClientContext.Provider value={{
+      channels, setChannels, createClientConnection,
       subscribeToChannel, unsubscribeFromChannel,
-      sendMessage
+      sendMessage, clientDevices, setClientDevices
     }}>
       {children}
-    </WebSocketContext.Provider>
+    </ClientContext.Provider>
   );
 }                   

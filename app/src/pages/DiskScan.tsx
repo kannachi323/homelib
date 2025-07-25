@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { DiskScannerScanDisks, DiskScannerView, DiskScannerWelcome } from "../ui/DiskScanner";
+import { DiskScannerScanDisks, DiskScannerResults, DiskScannerWelcome } from "../ui/DiskScanner";
 import { useDisk } from "../hooks/useDisk";
 
 
@@ -11,7 +11,7 @@ function renderStep(step: number) {
     case 1:
       return <DiskScannerScanDisks />;
     case 2:
-      return <DiskScannerView />;
+      return <DiskScannerResults />;
     default:
       return null;
   }

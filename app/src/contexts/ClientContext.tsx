@@ -6,14 +6,22 @@ export type Channel = {
     messages: string[];
 }
 
-export type WebSocketContextType = {
+export type Device = {
+    name: string;
+    address: string; //this must be encoded before sending
+    port: number;
+    type: string;
+}
+
+export type ClientContextType = {
     channels: Record<string, Channel>;
     setChannels: (channels: Record<string, Channel>) => void;
-    conn: WebSocket | null;
-    setConn: (conn: WebSocket | null) => void;
+    createClientConnection: () => void;
     subscribeToChannel: (channelName: string) => void;
     unsubscribeFromChannel: (channelName: string) => void;
     sendMessage: (channelName: string, message: string) => void;
+    clientDevices: Device[];
+    setClientDevices: (devices: Device[]) => void;
 };
 
-export const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
+export const ClientContext = createContext<ClientContextType | undefined>(undefined);

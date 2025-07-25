@@ -11,15 +11,17 @@ import (
 
 type Proxy struct {
 	Router *chi.Mux
-	ChannelManager *manager.ChannelManager
 	ClientManager *manager.ClientManager
 }
 
 func CreateProxy() *Proxy {
+
+	channelManager := manager.NewChannelManager()
+	clientManager := manager.NewClientManager(channelManager)
+
     p := &Proxy{
 		Router: chi.NewRouter(),
-		ChannelManager: manager.CreateChannelManager(),
-		ClientManager: manager.CreateClientManager(),
+		ClientManager: clientManager,
 	}
 
 	p.MountHandlers()
@@ -34,7 +36,7 @@ func (p *Proxy) MountHandlers() {
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		AllowCredentials: true,
 	}))
-	p.Router.Get("/ws", api.CreateConn(p.ChannelManager))
+	p.Router.Get("/ws", api.CreateConn(p.ClientManager))
 	p.Router.Get("/ipify", api.GetPublicIP())
 	p.Router.Get("/pub", api.PubToChannel())
 	p.Router.Get("/sub", api.SubToChannel())
