@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"homelib/db"
+	"homelib/db/query"
 	"homelib/middleware"
 	"net/http"
 )
@@ -11,13 +12,13 @@ func GetUser(db *db.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Context().Value(middleware.UserIDKey).(string)
 
-		email, err := db.GetUserEmail(userID)
+		email, err := query.GetUserEmail(db, userID)
 		if err != nil {
 			http.Error(w, "Failed to get user email", http.StatusInternalServerError)
 			return
 		}
 
-		fullName, err := db.GetUserFullName(userID)
+		fullName, err := query.GetUserFullName(db, userID)
 		if err != nil {
 			http.Error(w, "Failed to get user full name", http.StatusInternalServerError)
 			return

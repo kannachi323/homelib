@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"homelib/utils"
+	"log"
 	"net/http"
 )
 
@@ -14,9 +15,12 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("access_token")
 		if err != nil {
+			log.Println("No access token found, user is unauthorized")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+
+		log.Println("Access token found, verifying...")
 
 		//first let's check if access token is still valid
 		userID, err := utils.VerifyJWT(cookie.Value)

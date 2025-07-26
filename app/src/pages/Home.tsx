@@ -5,7 +5,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { downloadFile } from "../utils/files";
 import { useFileExplorer } from "../hooks/useFileExplorer";
 import { useClient } from "../hooks/useClient";
-import { FiltersBar } from "../ui/FileExplorer";
+import { FiltersBar } from "../features/FileExplorer";
 import { type File } from "../contexts/FileExplorerContext";
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
@@ -54,7 +54,8 @@ export default function Home() {
 
   }
 
-  const { createClientConnection } = useClient();
+  const { createClientConnection, sendMessage, conn} = useClient();
+
 
   return (
     <div className="flex flex-col h-full max-h-screen">
@@ -71,6 +72,7 @@ export default function Home() {
           ))}
         </div>
         <button onClick={() => createClientConnection()}>connect to services</button>
+        <button onClick={() => sendMessage(conn, "system", "Hello from client!")}>Send Message</button>
       </div>
     </div>
 

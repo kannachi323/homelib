@@ -43,20 +43,29 @@ func (s *Server) MountHandlers() {
 		AllowCredentials: true,
 	}))
 
+
+	// Files
 	s.Router.Post("/file", api.Upload())
 	s.Router.Get("/file", api.Download())
 	s.Router.Get("/files-zip", api.DownloadZip())
 	s.Router.With(middleware.ValidatePathMiddleware).Get("/files", api.ListFiles())
 	
+	// Disks
 	s.Router.Get("/disks", api.ListDisks())
+	s.Router.Get("/home", api.GetLocalUserHome())
 
+	// Auth
 	s.Router.Post("/signup", api.SignUp(s.DB))
 	s.Router.Post("/login", api.LogIn(s.DB))
 
-
+	
+	// Users
 	s.Router.With(middleware.AuthMiddleware).Get("/user", api.GetUser(s.DB))
 
 
 	
 	
+	// Devices
+	s.Router.With(middleware.AuthMiddleware).Post("/device", api.AddDevice(s.DB))
+	s.Router.With(middleware.AuthMiddleware).Get("/devices", api.GetDevices(s.DB))
 }

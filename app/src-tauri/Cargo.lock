@@ -102,7 +102,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-log",
  "tauri-plugin-opener",
- "tauri-plugin-os",
+ "tauri-plugin-process",
  "tauri-plugin-shell",
 ]
 
@@ -4072,21 +4072,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-os"
+name = "tauri-plugin-process"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05bccb4c6de4299beec5a9b070878a01bce9e2c945aa7a75bcea38bcba4c675d"
+checksum = "7461c622a5ea00eb9cd9f7a08dbd3bf79484499fd5c21aa2964677f64ca651ab"
 dependencies = [
- "gethostname",
- "log",
- "os_info",
- "serde",
- "serde_json",
- "serialize-to-javascript",
- "sys-locale",
  "tauri",
  "tauri-plugin",
- "thiserror 2.0.12",
 ]
 
 [[package]]

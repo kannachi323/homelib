@@ -39,7 +39,7 @@ export function FileExplorer() {
   console.log(backStack, forwardStack); // Debugging output
   
   return (
-    <div className="flex items-center justify-between w-full h-full gap-4 p-2">
+    <div className="flex items-center justify-between w-full h-full gap-4 p-2 bg-[#181818]">
       <div className="flex flex-row p-2 h-full gap-4 items-center">
         <RiArrowLeftSLine className={`text-3xl rounded transition-all duration-200 
           ${backStack.length === 0 

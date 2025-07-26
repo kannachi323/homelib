@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { RiScan2Fill } from "react-icons/ri";
+import { FiHardDrive } from "react-icons/fi";
+import { useNavigate } from 'react-router';
+
 
 import { Loading } from "../components/Loading";
 import { useDisk } from "../hooks/useDisk";
 import { type Disk } from '../contexts/DiskContext';
+import { formatBytes } from '../utils/disks';
+
 
 
 export function DiskScannerTab({ isOpen } : {isOpen: boolean}) {
   return (
     <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center'} items-center w-full`}>
-      <RiScan2Fill className="text-2xl"/>
+      <FiHardDrive className="text-2xl"/>
       {isOpen && 
           <h1 className="text-lg font-bold whitespace-nowrap">
-            Disk Scanner
+            Disks
           </h1>
         }
     </div>
@@ -23,18 +27,27 @@ export function DiskScannerWelcome() {
   const { setScanStep } = useDisk();
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-      <h1 className="text-2xl font-bold mb-4">
-        Welcome! Let’s scan your device and show all available disks.
-      </h1>
-      <div className="rounded-full w-[128px] h-[128px] flex items-center justify-center border cursor-pointer hover:bg-white/20"
-        onClick={() => setScanStep(1)}
-      >
-
-        Scan
+    <div className="w-full h-full flex flex-col items-center justify-center px-6 text-center space-y-6 bg-[#222121] text-white">
+      <div className="flex items-center justify-center bg-white/10 rounded-full w-28 h-28">
+        <FiHardDrive className="w-12 h-12 text-[#10A37F]" />
       </div>
+
+      <h1 className="text-3xl font-semibold text-white">
+        Let’s scan your disks
+      </h1>
+
+      <p className="text-gray-300 max-w-md">
+        Do a quick scan to find your local disks. This helps HomeLib manage your files and storage efficiently.
+      </p>
+
+      <button
+        onClick={() => setScanStep(1)}
+        className="px-6 py-3 bg-[#10A37F] text-white rounded-full hover:bg-[#0e8c6f] transition-all duration-200 shadow-md hover:shadow-lg"
+      >
+        Scan Disks
+      </button>
     </div>
-  )
+  );
 
 }
 
@@ -43,8 +56,7 @@ export function DiskScannerScanDisks() {
   const [isDone, setIsDone] = useState(false);
 
 
-   useEffect(() => {
-    
+  useEffect(() => {
     async function scanDisks() {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/disks`);
@@ -55,39 +67,46 @@ export function DiskScannerScanDisks() {
 
         const data: Disk[] = await res.json();
         if (data.length > 0) {
+          console.log("Disks found:", data);
           setDisks(data);
-          setScanStep(2);
           localStorage.setItem('disks', JSON.stringify(data));
         }
       } catch (err) {
         console.error("Fetch error:", err);
       } finally {
-        setIsDone(true);
+        setTimeout(() => {
+          setScanStep(2);
+          setIsDone(true);
+        }, 1500);
       }
     }
-
     scanDisks();
   }, [setScanStep, setDisks]);
 
 
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center">
-    
-      {!isDone && 
+    <div className="w-full h-full flex flex-col items-center justify-center px-6 text-center space-y-6 bg-[#222121] text-white">
+      {!isDone && (
         <>
-          
-          <h1 className="text-2xl font-bold mb-4">Scanning for disks...</h1>
-          <Loading />  
+          <div className="flex items-center justify-center bg-white/10 rounded-full w-24 h-24">
+            <FiHardDrive className="w-10 h-10 text-[#10A37F]" />
+          </div>
+          <h1 className="text-2xl font-semibold">Scanning for disks...</h1>
+          <p className="text-gray-300 max-w-md">
+            Sit tight while we detect your local storage. This won't take long...
+          </p>
+          <Loading />
         </>
-      }
+      )}
     </div>
-  )
+  );
 }
 
 export function DiskScannerResults() {
   const { disks, setScanStep, setDisks } = useDisk();
   const [selectedDisks, setSelectedDisks] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   function handleDiskToggle(disk: Disk) {
     setSelectedDisks((prev) => {
@@ -107,37 +126,39 @@ export function DiskScannerResults() {
     localStorage.setItem("disks", JSON.stringify(selectedDiskList));
     console.log("Selected disks saved:", selectedDiskList);
     setScanStep(0);
+    navigate('/');
   }
 
   return (
-    <div className="w-full h-full flex flex-col items-center p-4">
-      <h1 className="text-2xl font-bold">Choose disks to include:</h1>
-      <ul className="w-full h-auto space-y-2 p-2 overflow-scroll">
+    <div className="w-full h-full flex flex-col items-center p-6 bg-[#222121] text-white">
+      <h1 className="text-2xl font-semibold mb-4">Choose disks to include</h1>
+
+      <ul className="w-full max-w-xl space-y-3 overflow-y-auto px-5">
         {disks.map((disk) => {
           const isSelected = selectedDisks.has(disk.device);
           return (
             <li
               key={disk.device}
               onClick={() => handleDiskToggle(disk)}
-              className={`flex flex-row items-center justify-between w-full p-4 rounded cursor-pointer transition-colors
-                ${isSelected ? "bg-blue-600 text-white" : "bg-gray-800 hover:bg-gray-700 text-gray-100"}`}
+              className={`flex flex-row items-center justify-between p-4 rounded-lg cursor-pointer transition-all
+                ${isSelected 
+                  ? "bg-[#10A37F] text-white" 
+                  : "bg-white/5 hover:bg-white/10 text-white/90"}`}
             >
-              {/* Disk info */}
-              <div className="flex flex-col">
-                <div className="font-semibold">
-                  {disk.device} ({disk.mountpoint})
+              <div className="flex flex-col w-[90%]">
+                <div className="font-medium truncate overflow-hidden whitespace-nowrap">
+                  {`${disk.name} (${disk.device})`}
                 </div>
                 <div className="text-sm text-gray-300">
-                  FS: {disk.fstype} | Size: {disk.total}
+                  FS: {disk.fstype} | Size: {formatBytes(disk.total)}
                 </div>
               </div>
 
-              {/* Actual checkbox */}
               <input
                 type="checkbox"
                 readOnly
                 checked={isSelected}
-                className="w-5 h-5 ml-4 accent-blue-500 cursor-pointer"
+                className="w-5 h-5 accent-[#10A37F] cursor-pointer bg-red-50"
               />
             </li>
           );
@@ -146,9 +167,9 @@ export function DiskScannerResults() {
 
       <button
         onClick={handleSaveDisks}
-        className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        className="mt-6 px-6 py-2 bg-[#10A37F] text-white rounded-full hover:bg-[#0e8c6f] transition-all duration-200 shadow-md hover:shadow-lg"
       >
-        Save Selected Disks
+        Save
       </button>
     </div>
   );

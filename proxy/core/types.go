@@ -2,7 +2,8 @@ package core
 
 
 type ClientRequest struct {
-    Type string      `json:"type"`
+    ClientID string `json:"client_id"`
+    Channel string      `json:""`
     Message string   `json:"data"`
 }
 

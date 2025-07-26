@@ -1,6 +1,7 @@
 import { createContext } from 'react';
 
 export type Disk = {
+    name: string;
     device: string;
     mountpoint: string;
     fstype: string;

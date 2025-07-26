@@ -19,41 +19,42 @@ var upgrader = websocket.Upgrader {
 
 func CreateConn(cm *manager.ClientManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Upgrade HTTP to WebSocket
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("WebSocket upgrade error:", err)
 			return
 		}
+		log.Println("WebSocket connection established")
 
-		var data core.ClientRequest
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		// Wait for initial message
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Error reading initial message:", err)
+			conn.Close()
 			return
 		}
 
-		log.Println(data)
-		
+		var data core.ClientRequest
+		if err := json.Unmarshal(msg, &data); err != nil {
+			log.Println("Invalid initial JSON:", err)
+			conn.Close()
+			return
+		}
+	
 		clientID := uuid.NewString()
 		client := core.NewClient(clientID, "anonymous", conn)
-		log.Printf("New client connected: %s", clientID)
 
 		cm.AddChannelToClient(clientID, "system")
 		cm.ChannelManager.AddClientToChannel(client, "system")
-		
+
 		client.StartReader()
 		client.StartWriter()
 
-		channel, err := cm.ChannelManager.GetChannel("as")
-		if err != nil {
-			log.Printf("Error getting channel: %v", err)
-			return
+		if channel, err := cm.ChannelManager.GetChannel("system"); err == nil {
+			channel.Broadcast(&core.ServerResponse{
+				Channel: "system",
+				Message: "You are now connected",
+			})
 		}
-
-		res := &core.ServerResponse{
-			Channel: "adf",
-			Message: "You are now connected",
-		}
-		channel.Broadcast(res)
 	}
 }

@@ -14,7 +14,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     }
     const websocket = new WebSocket("ws://localhost:8000/ws");
     websocket.onopen = () => {
-      sendMessage("system", "Connected to WebSocket server");
+      websocket.send(JSON.stringify({
+        client_id: "client-id-placeholder",
+        type: "system",
+        message: "Client connected"
+      }))
     };
 
     websocket.onmessage = (event) => {
@@ -48,10 +52,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  function sendMessage(channelName: string, message: string) {
-    //the pub sub model is always at /sub, /pub on the proxy
+  function sendMessage(conn: WebSocket | null, channelName: string, message: string) {
+    console.log(conn)
+    console.log(conn?.readyState);
     if (conn && conn.readyState === WebSocket.OPEN) {
       conn.send(JSON.stringify({
+        client_id: "client-id-placeholder",
         channel: channelName,
         message: message
       }))
@@ -61,6 +67,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ClientContext.Provider value={{
+      conn, setConn,
       channels, setChannels, createClientConnection,
       subscribeToChannel, unsubscribeFromChannel,
       sendMessage, clientDevices, setClientDevices

@@ -1,3 +1,5 @@
+
+DROP TABLE IF EXISTS users;
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -6,12 +8,11 @@ CREATE TABLE IF NOT EXISTS users (
     is_admin BOOLEAN NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+DROP TABLE IF EXISTS devices;
+CREATE TABLE IF NOT EXISTS devices (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    name TEXT NOT NULL,
+    address TEXT NOT NULL,
+    user_id REFERENCES users(id) ON DELETE CASCADE
 )
 

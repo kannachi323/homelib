@@ -14,12 +14,14 @@ export type Device = {
 }
 
 export type ClientContextType = {
+    conn: WebSocket | null;
+    setConn: (conn: WebSocket | null) => void;
     channels: Record<string, Channel>;
     setChannels: (channels: Record<string, Channel>) => void;
     createClientConnection: () => void;
     subscribeToChannel: (channelName: string) => void;
     unsubscribeFromChannel: (channelName: string) => void;
-    sendMessage: (channelName: string, message: string) => void;
+    sendMessage: (conn: WebSocket | null, channelName: string, message: string) => void;
     clientDevices: Device[];
     setClientDevices: (devices: Device[]) => void;
 };

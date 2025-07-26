@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 
-import { DiskScannerScanDisks, DiskScannerResults, DiskScannerWelcome } from "../ui/DiskScanner";
+import { DiskScannerScanDisks, DiskScannerResults, DiskScannerWelcome } from "../features/DiskScanner";
 import { useDisk } from "../hooks/useDisk";
+
 
 
 function renderStep(step: number) {

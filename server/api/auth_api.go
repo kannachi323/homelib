@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"homelib/db"
+	"homelib/db/query"
 	"homelib/utils"
 	"log"
 	"net/http"
@@ -33,7 +34,7 @@ func SignUp(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		err = db.CreateUser(req.Name, req.Email, req.Password)
+		err = query.CreateUser(db, req.Name, req.Email, req.Password)
 		if err != nil {
 			log.Println(err.Error())
 			if err.Error() == "user already exists" {
@@ -58,7 +59,7 @@ func LogIn(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		id, err := db.CheckUser(req.Email, req.Password)
+		id, err := query.CheckUser(db, req.Email, req.Password)
 		if err != nil {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return

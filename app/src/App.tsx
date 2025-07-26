@@ -6,8 +6,8 @@ import { useState, useEffect } from "react";
 
 import { DiskProvider } from "./contexts/DiskProvider";
 import { FileExplorerProvider } from "./contexts/FileExplorerProvider";
-import { Menu } from "./ui/Menu";
-import { FileExplorer } from "./ui/FileExplorer";
+import { Menu } from "./features/Menu";
+import { FileExplorer } from "./features/FileExplorer";
 import { useAuthContext } from "./hooks/useAuthContext";
 
 function App() {
@@ -37,7 +37,7 @@ function App() {
           <aside
             className={`
               h-full border-r flex flex-col justify-between items-center 
-              transition-all duration-300 bg-[#181818]
+              transition-all duration-300
               ${isOpen ? "w-[25vw]" : "w-[5vw]"}
             `}
           >

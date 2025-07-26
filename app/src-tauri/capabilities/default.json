@@ -43,6 +43,6 @@
         }
       ]
     },
-    "os:default"
+    "process:default"
   ]
 }
