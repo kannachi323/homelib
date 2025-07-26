@@ -6,18 +6,17 @@ import (
 
 	"proxy/api"
 	"proxy/core"
-	"proxy/manager"
 )
 
 type Proxy struct {
 	Router *chi.Mux
-	ClientManager *manager.ClientManager
+	ClientManager *core.ClientManager
 }
 
 func CreateProxy() *Proxy {
 
-	channelManager := manager.NewChannelManager()
-	clientManager := manager.NewClientManager(channelManager)
+	channelManager := core.NewChannelManager()
+	clientManager := core.NewClientManager(channelManager)
 
     p := &Proxy{
 		Router: chi.NewRouter(),
@@ -46,8 +45,3 @@ func (p *Proxy) MountHandlers() {
 
 
 
-func CreateClients() map[string]*core.Client {
-	clients := make(map[string]*core.Client)
-	clients["default"] = core.NewClient("default", "Default Client", nil)
-	return clients
-}

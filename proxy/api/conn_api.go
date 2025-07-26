@@ -5,19 +5,18 @@ import (
 	"log"
 	"net/http"
 	"proxy/core"
-	"proxy/manager"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader {
+var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
-func CreateConn(cm *manager.ClientManager) http.HandlerFunc {
+func CreateConn(cm *core.ClientManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -26,7 +25,6 @@ func CreateConn(cm *manager.ClientManager) http.HandlerFunc {
 		}
 		log.Println("WebSocket connection established")
 
-		// Wait for initial message
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading initial message:", err)
@@ -40,15 +38,29 @@ func CreateConn(cm *manager.ClientManager) http.HandlerFunc {
 			conn.Close()
 			return
 		}
-	
-		clientID := uuid.NewString()
-		client := core.NewClient(clientID, "anonymous", conn)
 
-		cm.AddChannelToClient(clientID, "system")
-		cm.ChannelManager.AddClientToChannel(client, "system")
+		clientID := uuid.NewString()
+		client := core.NewClient(clientID, conn)
+
+		cm.AddClient(client)
+
+		if err := cm.JoinChannel(clientID, "system"); err != nil {
+			log.Println("Client failed to join channel:", err)
+			conn.Close()
+			return
+		}
+		
 
 		client.StartReader()
+		client.StartProcessor()
 		client.StartWriter()
+
+		go func() {
+			for msg := range client.Incoming {
+				log.Printf("[Processor] Message from %s: %s", client.ID, string(msg))
+				// Optionally unmarshal and route the command
+			}
+		}()
 
 		if channel, err := cm.ChannelManager.GetChannel("system"); err == nil {
 			channel.Broadcast(&core.ServerResponse{
