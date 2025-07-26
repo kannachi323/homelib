@@ -1,18 +1,10 @@
 package core
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"sync"
 )
-
-type Channel struct {
-	Name    string            `json:"name"`
-	Info    string            `json:"info"`
-	Clients map[string]*Client
-	mu      sync.RWMutex
-}
 
 type ChannelManager struct {
 	Channels map[string]*Channel
@@ -28,13 +20,7 @@ func NewChannelManager() *ChannelManager {
 	}
 }
 
-func NewChannel(name, info string) *Channel {
-	return &Channel{
-		Name:    name,
-		Info:    info,
-		Clients: make(map[string]*Client),
-	}
-}
+
 
 // --- ChannelManager methods ---
 
@@ -82,25 +68,19 @@ func (cm *ChannelManager) GetChannel(name string) (*Channel, error) {
 
 // --- Channel methods ---
 
-func (ch *Channel) Broadcast(res *ServerResponse) error {
-	b, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
+type Channel struct {
+	Name    string            `json:"name"`
+	Info    string            `json:"info"`
+	Clients map[string]*Client
+	mu      sync.RWMutex
+}
 
-	ch.mu.RLock()
-	defer ch.mu.RUnlock()
-	for _, client := range ch.Clients {
-		if client.Disconnected.Load() {
-			continue
-		}
-		select {
-		case client.Outgoing <- b:
-		default:
-			log.Println("Client channel full:", client.ID)
-		}
+func NewChannel(name, info string) *Channel {
+	return &Channel{
+		Name:    name,
+		Info:    info,
+		Clients: make(map[string]*Client),
 	}
-	return nil
 }
 
 func (ch *Channel) AddToChannel(client *Client) {
@@ -114,3 +94,21 @@ func (ch *Channel) RemoveFromChannel(clientID string) {
 	defer ch.mu.Unlock()
 	delete(ch.Clients, clientID)
 }
+
+
+// --- ChannelHandler interface ---
+type ChannelHandler interface {
+	HandleChannel(task string)	
+	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
+	Broadcast(res *ChannelResponse) error
+}
+
+type ChannelResponse struct {
+	ClientID string `json:"client_id"`
+	Channel string `json:"channel"`
+	Task string `json:"task"`
+	Success bool  `json:"success"`
+	Result interface{} `json:"result"`
+	Error string `json:"error,omitempty"`
+}
+

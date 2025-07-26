@@ -19,6 +19,13 @@ type Client struct {
 	closeOnce sync.Once
 }
 
+type ClientData struct {
+    ClientID string `json:"client_id"`
+    Channel string   `json:"channel"`
+	Data interface{} `json:"data"`
+}
+
+
 func NewClient(id string, conn *websocket.Conn) *Client {
 	return &Client{
 		ID:       id,
@@ -49,7 +56,6 @@ func (c *Client) StartProcessor() {
 	go func() {
 		for msg := range c.Incoming {
 			log.Printf("[Processor] Message from %s: %s", c.ID, string(msg))
-			// Optionally unmarshal and route the command
 		}
 	}()
 }

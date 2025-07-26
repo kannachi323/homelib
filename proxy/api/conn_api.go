@@ -55,17 +55,14 @@ func CreateConn(cm *core.ClientManager) http.HandlerFunc {
 		client.StartProcessor()
 		client.StartWriter()
 
-		go func() {
-			for msg := range client.Incoming {
-				log.Printf("[Processor] Message from %s: %s", client.ID, string(msg))
-				// Optionally unmarshal and route the command
-			}
-		}()
 
 		if channel, err := cm.ChannelManager.GetChannel("system"); err == nil {
-			channel.Broadcast(&core.ServerResponse{
+			channel.Broadcast(&core.ClientData{
+				ClientID: clientID,
 				Channel: "system",
-				Message: "You are now connected",
+				Data: map[string]string{
+					"message": "Cleint "
+				}
 			})
 		}
 	}
