@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"proxy/core"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -39,22 +38,13 @@ func CreateConn(cm *core.ClientManager, chm *core.ChannelManager) http.HandlerFu
 			return
 		}
 
-		clientID := uuid.NewString()
-		client := core.NewClient(clientID, conn, chm)
-
+		client := core.NewClient(data.ClientID, conn, chm)
 		cm.ClientAdd(client)
 
-		if err := cm.ClientJoinChannel(clientID, "system"); err != nil {
-			log.Println("Client failed to join channel:", err)
-			conn.Close()
-			return
-		}
 		
-
 		client.StartReader()
 		client.StartProcessor()
 		client.StartWriter()
-
 
 	}
 }

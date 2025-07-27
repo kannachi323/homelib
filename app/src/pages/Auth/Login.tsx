@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuthContext } from '../../hooks/useAuthContext';
+import { useAuthContext } from '../../hooks/useAuth';
 
 export default function LogIn() {
   const {setIsAuthenticated, setUser} = useAuthContext();

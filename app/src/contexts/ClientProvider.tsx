@@ -1,76 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-import { ClientContext, type Channel, type Device } from "./ClientContext";
+import { ClientContext, type Client, type Device } from "./ClientContext";
+import { useAuthContext } from "../hooks/useAuth";
+import { JoinSystemChannel } from "../utils/channels/system";
 
-export function ClientProvider({ children }: { children: React.ReactNode }) {
-  const [channels, setChannels] = useState<Record<string, Channel>>({});
-  const [conn, setConn] = useState<WebSocket | null>(null);
-  const [clientDevices, setClientDevices] = useState<Device[]>([]);
+function CreateConn(client: Client) : WebSocket {
+  if (!client) {
+    throw new Error("Client is not defined");
+  }
 
-  function createClientConnection() {
-    if (conn) {
-      console.warn("WebSocket connection already exists");
-      return;
-    }
-    const websocket = new WebSocket("ws://localhost:8000/ws");
-    websocket.onopen = () => {
-      websocket.send(JSON.stringify({
-        client_id: "client-id-placeholder",
-        type: "system",
-        message: "Client connected"
-      }))
+  const socket = new WebSocket("ws://localhost:8000/ws");
+    socket.onopen = () => {
+      JoinSystemChannel(client, socket);
     };
 
-    websocket.onmessage = (event) => {
+    socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("Received message:", data);
     }
 
-    websocket.onclose = () => {
+    socket.onclose = () => {
       console.log("WebSocket connection closed");
     };
 
-    setConn(websocket);
-  }
+  return socket;
+}
 
-  function subscribeToChannel(channelName: string) {
-    setChannels((channels) => ({
-      ...channels,
-      [channelName]: {
-        name: channelName,
-        info: `Subscribed to ${channelName}`,
-        messages: []
+export function ClientProvider({ children }: { children: React.ReactNode }) {
+  const [client, setClient] = useState<Client | null>(null);
+  const [conn, setConn] = useState<WebSocket | null>(null);
+  const [clientDevices, setClientDevices] = useState<Device[]>([]);
+
+  const { user, authChecked } = useAuthContext();
+
+
+
+  useEffect(() => {
+    try {
+      console.log("Setting up client connection...");
+      if (!authChecked || conn) {
+        console.warn("Auth context not checked yet");
+        return;
+      } else if (!user) {
+        throw new Error("User must be authenticated to create a client connection");
       }
-    }))
-  }
 
-  function unsubscribeFromChannel(channelName: string) {
-    setChannels((channels) => {
-      const newChannels = { ...channels };
-      delete newChannels[channelName];
-      return newChannels;
-    });
-  }
+      setClient({
+        id: user.id,
+        name: user.name,
+        devices: []
+      })
 
-  function sendMessage(conn: WebSocket | null, channelName: string, message: string) {
-    console.log(conn)
-    console.log(conn?.readyState);
-    if (conn && conn.readyState === WebSocket.OPEN) {
-      conn.send(JSON.stringify({
-        client_id: "client-id-placeholder",
-        channel: channelName,
-        message: message
-      }))
+      setConn(CreateConn({
+        id: user.id,
+        name: user.name,
+        devices: []
+      }));
+      
+    } catch (error) {
+      console.error("Error setting up client: ", error);
     }
-  }
-  
+
+  }, [setConn, conn, setClient, user, authChecked])
 
   return (
-    <ClientContext.Provider value={{
-      conn, setConn,
-      channels, setChannels, createClientConnection,
-      subscribeToChannel, unsubscribeFromChannel,
-      sendMessage, clientDevices, setClientDevices
+    <ClientContext.Provider value={{ client, setClient,
+      conn, setConn, clientDevices, setClientDevices
     }}>
       {children}
     </ClientContext.Provider>

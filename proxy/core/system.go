@@ -15,20 +15,17 @@ type SystemResult struct {
 	Message string `json:"message"`
 }
 
-func (s *SystemHandler) HandleChannel(req *ClientRequest, ch *Channel) {
+func (s *SystemHandler) HandleChannel(client *Client, req *ClientRequest, ch *Channel) {
 	//we can get info from the client request body, it shoudl be of type SystemBody
-	var body SystemReqBody
 
-	
-	if err := json.Unmarshal(req.Body, &body); err != nil {
-		log.Println("Error unmarshalling SystemBody:", err)
-		return
+	switch (req.Task) {
+	case "join":
+		s.JoinSystem(client, req, ch)
 	}
-
 
 	res := s.CreateChannelResponse(
 		req.ClientID,
-		req.Channel,
+		req.ChannelName,
 		req.Task,
 		true,
 		SystemResult{Message: "hey there"},
@@ -71,4 +68,24 @@ func (s *SystemHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
 		}
 	}
 	return nil
+}
+
+func (s *SystemHandler) JoinSystem(client *Client, req *ClientRequest, ch *Channel) {
+	if err := ch.AddToChannel(client); err != nil {
+		log.Println("Error adding client to channel:", err)
+		return
+	}
+
+	res := s.CreateChannelResponse(
+		req.ClientID,
+		req.ChannelName,
+		req.Task,
+		true,
+		SystemResult{Message: "Joined system channel"},
+		"",
+	)
+
+	if err := s.Broadcast(res, ch); err != nil {
+		log.Println("Error broadcasting join message:", err)
+	}
 }

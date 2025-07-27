@@ -9,6 +9,7 @@ import { FiltersBar } from "../features/FileExplorer";
 import { type File } from "../contexts/FileExplorerContext";
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
+import { JoinIpify, GetLocalIP } from "../utils/channels/ipify";
 
 export default function Home() {
   const { files, startAt, navigateTo  } = useFileExplorer();
@@ -54,7 +55,7 @@ export default function Home() {
 
   }
 
-  const { createClientConnection, sendMessage, conn} = useClient();
+  const { conn, client } = useClient();
 
 
   return (
@@ -71,8 +72,8 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <button onClick={() => createClientConnection()}>connect to services</button>
-        <button onClick={() => sendMessage(conn, "system", JSON.stringify({timestamp: "adsf"}))}>Send Message</button>
+        <button onClick={() => JoinIpify(client, conn)}>Join ipify</button>
+        <button onClick={() => GetLocalIP(client, conn)}>Get Local ip</button>
       </div>
     </div>
 

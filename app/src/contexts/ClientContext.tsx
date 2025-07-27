@@ -1,11 +1,5 @@
 import { createContext } from "react";
 
-export type Channel = {
-    name: string;
-    info: string;
-    messages: string[];
-}
-
 export type Device = {
     name: string;
     address: string; //this must be encoded before sending
@@ -13,17 +7,26 @@ export type Device = {
     type: string;
 }
 
+export type Client = {
+    id: string;
+    name: string;
+    devices: Device[];
+}
+
+export type ClientRequest = {
+    client_id: string;
+    channel_name: string;
+    task: string;
+}
+
 export type ClientContextType = {
+    client: Client | null;
+    setClient: (client: Client) => void;
     conn: WebSocket | null;
     setConn: (conn: WebSocket | null) => void;
-    channels: Record<string, Channel>;
-    setChannels: (channels: Record<string, Channel>) => void;
-    createClientConnection: () => void;
-    subscribeToChannel: (channelName: string) => void;
-    unsubscribeFromChannel: (channelName: string) => void;
-    sendMessage: (conn: WebSocket | null, channelName: string, message: string) => void;
     clientDevices: Device[];
     setClientDevices: (devices: Device[]) => void;
 };
+
 
 export const ClientContext = createContext<ClientContextType | undefined>(undefined);

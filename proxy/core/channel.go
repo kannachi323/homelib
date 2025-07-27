@@ -22,7 +22,7 @@ func NewChannelManager() *ChannelManager {
 }
 
 // --- ChannelManager methods ---
-func (cm *ChannelManager) AddToChannel(client *Client, channelName string) error {
+func (cm *ChannelManager) ChannelAddClient(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
 	cm.mu.RUnlock()
@@ -30,11 +30,13 @@ func (cm *ChannelManager) AddToChannel(client *Client, channelName string) error
 		log.Println("Channel does not exist:", channelName)
 		return errors.New("channel does not exist")
 	}
+
 	channel.AddToChannel(client)
+
 	return nil
 }
 
-func (cm *ChannelManager) RemoveFromChannel(client *Client, channelName string) error {
+func (cm *ChannelManager) ChannelRemoveClient(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
 	cm.mu.RUnlock()
@@ -42,11 +44,12 @@ func (cm *ChannelManager) RemoveFromChannel(client *Client, channelName string) 
 		log.Println("Channel does not exist:", channelName)
 		return errors.New("channel does not exist")
 	}
+
 	channel.RemoveFromChannel(client.ID)
 	return nil
 }
 
-func (cm *ChannelManager) RemoveClientFromAllChannels(clientID string) {
+func (cm *ChannelManager) ChannelRemoveAllClients(clientID string) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	for _, ch := range cm.Channels {
@@ -83,22 +86,37 @@ func NewChannel(name, info string, handler ChannelHandler) *Channel {
 	}
 }
 
-func (ch *Channel) AddToChannel(client *Client) {
+func (ch *Channel) AddToChannel(client *Client) error {
 	ch.Mu.Lock()
 	defer ch.Mu.Unlock()
+
+	if _, exists := ch.Clients[client.ID]; exists {
+		log.Println("client ", client.ID, "already in channel", ch.Name)
+		return errors.New("client already in channel")
+	}
+
 	ch.Clients[client.ID] = client
+	return nil
 }
 
-func (ch *Channel) RemoveFromChannel(clientID string) {
+
+func (ch *Channel) RemoveFromChannel(clientID string) error {
 	ch.Mu.Lock()
 	defer ch.Mu.Unlock()
+
+	if _, exists := ch.Clients[clientID]; !exists {
+		log.Println("client", clientID, "not found in channel", ch.Name)
+		return errors.New("client not found in channel")
+	}
+
 	delete(ch.Clients, clientID)
+	return nil
 }
 
 
 // --- ChannelHandler interface ---
 type ChannelHandler interface {
-	HandleChannel(req *ClientRequest, ch *Channel)	
+	HandleChannel(client *Client, req *ClientRequest, ch *Channel)	
 	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
 	Broadcast(res *ChannelResponse, ch *Channel) error
 }

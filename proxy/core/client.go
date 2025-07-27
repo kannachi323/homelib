@@ -11,10 +11,9 @@ import (
 )
 
 type ClientRequest struct {
-	ClientID string          `json:"client_id"`
-	Channel string `json:"channel"`
+	ClientID string     `json:"client_id"`
+	ChannelName string `json:"channel_name"`
 	Task    string `json:"task"`
-	Body	json.RawMessage `json:"body"`
 }
 
 type Client struct {
@@ -26,6 +25,7 @@ type Client struct {
 	Disconnected atomic.Bool
 	closeOnce sync.Once
 }
+
 
 func NewClient(id string, conn *websocket.Conn, cm *ChannelManager) *Client {
 	return &Client{
@@ -63,7 +63,7 @@ func (c *Client) StartProcessor() {
 				continue
 			}
 			log.Println("Processing client request:", clientRequest)
-			c.HandleClient(&clientRequest)
+			c.HandleClient(c, &clientRequest)
 		}
 	}()
 }
@@ -82,15 +82,15 @@ func (c *Client) StartWriter() {
 	}()
 }
 
-func (c *Client) HandleClient(req *ClientRequest) error {
-	ch, err := c.ChannelManager.GetChannel(req.Channel)
+func (c *Client) HandleClient(client *Client, req *ClientRequest) error {
+	ch, err := c.ChannelManager.GetChannel(req.ChannelName)
 	if err != nil {
 		return err
 	}
 	if ch.Handler == nil {
 		return errors.New("no handler for channel")
 	}
-	ch.Handler.HandleChannel(req, ch)
+	ch.Handler.HandleChannel(client, req, ch)
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (cm *ClientManager) ClientJoinChannel(clientID, channelName string) error {
 		return errors.New("client does not exist")
 	}
 
-	client.ChannelManager.AddToChannel(client, channelName)
+	client.ChannelManager.ChannelAddClient(client, channelName)
 	return nil
 }
 

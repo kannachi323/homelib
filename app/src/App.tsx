@@ -8,7 +8,7 @@ import { DiskProvider } from "./contexts/DiskProvider";
 import { FileExplorerProvider } from "./contexts/FileExplorerProvider";
 import { Menu } from "./features/Menu";
 import { FileExplorer } from "./features/FileExplorer";
-import { useAuthContext } from "./hooks/useAuthContext";
+import { useAuthContext } from "./hooks/useAuth";
 
 function App() {
   const [isOpen, setIsOpen] = useState(false);

@@ -2,7 +2,9 @@ package core
 
 import (
 	"encoding/json"
+	"io"
 	"log"
+	"net/http"
 )
 
 type IpifyHandler struct {}
@@ -13,22 +15,12 @@ type IpifyResult struct {
 	IP string `json:"ip"`
 }
 
-func (ic *IpifyHandler) HandleChannel(req *ClientRequest, ch *Channel) {
-	log.Println(req);
-	
-	// Example: simulate IP response
-	res := ic.CreateChannelResponse(
-		req.ClientID,
-		req.Channel, 
-		req.Task,
-		true,
-		&IpifyResult{IP: "0.0.0.0"},
-		"",
-	)
-
-	// Broadcast to all connected clients
-	if err := ic.Broadcast(res, ch); err != nil {
-		log.Println("Error broadcasting:", err)
+func (ic *IpifyHandler) HandleChannel(client *Client, req *ClientRequest, ch *Channel) {
+	switch (req.Task) {
+	case "join":
+		ic.JoinIpify(client, req, ch)
+	case "get_ip":
+		ic.GetLocalIP(client, req, ch)
 	}
 }
 
@@ -49,8 +41,11 @@ func (ic *IpifyHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
 		return err
 	}
 
+	
+
 	ch.Mu.RLock()
 	defer ch.Mu.RUnlock()
+	log.Println("Broadcasting to channel:", ch.Name, "with", len(ch.Clients), "clients")
 	for _, client := range ch.Clients {
 		if client.Disconnected.Load() {
 			continue
@@ -63,3 +58,60 @@ func (ic *IpifyHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
 	}
 	return nil
 }
+
+// these are all the possible tasks for the ipify channel
+func (ic *IpifyHandler) JoinIpify(client *Client, req *ClientRequest, ch *Channel) {
+
+	if err := ch.AddToChannel(client); err != nil {
+		log.Println("Error adding client to channel:", err)
+		return
+	}
+
+	res := ic.CreateChannelResponse(
+		req.ClientID,
+		req.ChannelName,
+		req.Task,
+		true,
+		nil,
+		"",
+	)
+
+	if err := ic.Broadcast(res, ch); err != nil {
+		log.Println("Error broadcasting join response:", err)
+	}
+}
+
+func (ic *IpifyHandler) GetLocalIP(client *Client, req *ClientRequest, ch *Channel) {
+	resp, err := http.Get("https://api.ipify.org?format=json")
+	if err != nil {
+		log.Println("Error fetching IP from ipify.org:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading ipify response:", err)
+		return
+	}
+
+	var result IpifyResult
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		log.Println("Error parsing ipify response:", err)
+		return
+	}
+
+	res := ic.CreateChannelResponse(
+		client.ID,
+		req.ChannelName,
+		req.Task,
+		true,
+		result,
+		"",
+	)
+
+	if err := ic.Broadcast(res, ch); err != nil {
+		log.Println("Error broadcasting IP response:", err)
+	}
+}
+

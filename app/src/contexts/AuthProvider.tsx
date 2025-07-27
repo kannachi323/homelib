@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 
-import { AuthContext } from "./AuthContext";
+import { AuthContext, type User } from "./AuthContext";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
 
@@ -20,7 +20,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (res.ok) {
           const data = await res.json();
           setIsAuthenticated(true);
-          setUser({ id: data.id, username: data.username });
+          const user : User = {
+            id: data.userID,
+            name: data.name,
+            email: data.email,
+          };
+          setUser(user);
         } else {
           setIsAuthenticated(false);
           setUser(null);
@@ -32,8 +37,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } finally {
         setAuthChecked(true);
       }
-      
-      
     }
  
     checkUser();
