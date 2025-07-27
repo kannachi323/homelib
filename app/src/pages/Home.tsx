@@ -72,7 +72,7 @@ export default function Home() {
           ))}
         </div>
         <button onClick={() => createClientConnection()}>connect to services</button>
-        <button onClick={() => sendMessage(conn, "system", "Hello from client!")}>Send Message</button>
+        <button onClick={() => sendMessage(conn, "system", JSON.stringify({timestamp: "adsf"}))}>Send Message</button>
       </div>
     </div>
 

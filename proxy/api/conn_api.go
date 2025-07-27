@@ -16,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func CreateConn(cm *core.ClientManager) http.HandlerFunc {
+func CreateConn(cm *core.ClientManager, chm *core.ChannelManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -40,11 +40,11 @@ func CreateConn(cm *core.ClientManager) http.HandlerFunc {
 		}
 
 		clientID := uuid.NewString()
-		client := core.NewClient(clientID, conn)
+		client := core.NewClient(clientID, conn, chm)
 
-		cm.AddClient(client)
+		cm.ClientAdd(client)
 
-		if err := cm.JoinChannel(clientID, "system"); err != nil {
+		if err := cm.ClientJoinChannel(clientID, "system"); err != nil {
 			log.Println("Client failed to join channel:", err)
 			conn.Close()
 			return
@@ -56,14 +56,5 @@ func CreateConn(cm *core.ClientManager) http.HandlerFunc {
 		client.StartWriter()
 
 
-		if channel, err := cm.ChannelManager.GetChannel("system"); err == nil {
-			channel.Broadcast(&core.ClientData{
-				ClientID: clientID,
-				Channel: "system",
-				Data: map[string]string{
-					"message": "Cleint "
-				}
-			})
-		}
 	}
 }

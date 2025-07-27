@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"sync"
@@ -9,30 +10,30 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type ClientRequest struct {
+	ClientID string          `json:"client_id"`
+	Channel string `json:"channel"`
+	Task    string `json:"task"`
+	Body	json.RawMessage `json:"body"`
+}
+
 type Client struct {
 	ID       string
 	Conn     *websocket.Conn
 	Incoming chan []byte
 	Outgoing chan []byte
-	Channels map[string]bool
+	ChannelManager *ChannelManager
 	Disconnected atomic.Bool
 	closeOnce sync.Once
 }
 
-type ClientData struct {
-    ClientID string `json:"client_id"`
-    Channel string   `json:"channel"`
-	Data interface{} `json:"data"`
-}
-
-
-func NewClient(id string, conn *websocket.Conn) *Client {
+func NewClient(id string, conn *websocket.Conn, cm *ChannelManager) *Client {
 	return &Client{
 		ID:       id,
 		Conn:     conn,
 		Incoming: make(chan []byte, 256),
 		Outgoing: make(chan []byte, 256),
-		Channels: make(map[string]bool),
+		ChannelManager: cm,
 	}
 }
 
@@ -55,7 +56,14 @@ func (c *Client) StartProcessor() {
 	//this goroutine processes messages from the Incoming channel
 	go func() {
 		for msg := range c.Incoming {
-			log.Printf("[Processor] Message from %s: %s", c.ID, string(msg))
+			var clientRequest ClientRequest
+			err := json.Unmarshal(msg, &clientRequest)
+			if err != nil {
+				log.Println("Error unmarshalling client request:", err)
+				continue
+			}
+			log.Println("Processing client request:", clientRequest)
+			c.HandleClient(&clientRequest)
 		}
 	}()
 }
@@ -74,6 +82,18 @@ func (c *Client) StartWriter() {
 	}()
 }
 
+func (c *Client) HandleClient(req *ClientRequest) error {
+	ch, err := c.ChannelManager.GetChannel(req.Channel)
+	if err != nil {
+		return err
+	}
+	if ch.Handler == nil {
+		return errors.New("no handler for channel")
+	}
+	ch.Handler.HandleChannel(req, ch)
+	return nil
+}
+
 
 func (c *Client) ClientClose() {
 	c.closeOnce.Do(func() {
@@ -88,29 +108,27 @@ func (c *Client) ClientClose() {
 type ClientManager struct {
 	Clients        map[string]*Client
 	mu             sync.RWMutex
-	ChannelManager *ChannelManager
 }
 
-func NewClientManager(cm *ChannelManager) *ClientManager {
+func NewClientManager() *ClientManager {
 	return &ClientManager{
 		Clients:        make(map[string]*Client),
-		ChannelManager: cm,
 	}
 }
 
-func (cm *ClientManager) AddClient(client *Client) {
+func (cm *ClientManager) ClientAdd(client *Client) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.Clients[client.ID] = client
 }
 
-func (cm *ClientManager) RemoveClient(clientID string) {
+func (cm *ClientManager) ClientRemove(clientID string) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	delete(cm.Clients, clientID)
 }
 
-func (cm *ClientManager) JoinChannel(clientID, channelName string) error {
+func (cm *ClientManager) ClientJoinChannel(clientID, channelName string) error {
 	cm.mu.RLock()
 	client, exists := cm.Clients[clientID]
 	cm.mu.RUnlock()
@@ -118,12 +136,9 @@ func (cm *ClientManager) JoinChannel(clientID, channelName string) error {
 		return errors.New("client does not exist")
 	}
 
-	_, err := cm.ChannelManager.GetChannel(channelName)
-	if err != nil {
-		return errors.New("channel does not exist")
-	}
-
-	cm.ChannelManager.AddToChannel(client, channelName)
-	client.Channels[channelName] = true
+	client.ChannelManager.AddToChannel(client, channelName)
 	return nil
 }
+
+
+

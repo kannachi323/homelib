@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+
 type ChannelManager struct {
 	Channels map[string]*Channel
 	mu       sync.RWMutex
@@ -14,16 +15,13 @@ type ChannelManager struct {
 func NewChannelManager() *ChannelManager {
 	return &ChannelManager{
 		Channels: map[string]*Channel{
-			"system": NewChannel("system", "proxy:system"),
-			"ipify":  NewChannel("ipify", "proxy:ipify"),
+			"system": NewChannel("system", "proxy:system", &SystemHandler{}),
+			"ipify":  NewChannel("ipify", "proxy:ipify", &IpifyHandler{}),
 		},
 	}
 }
 
-
-
 // --- ChannelManager methods ---
-
 func (cm *ChannelManager) AddToChannel(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
@@ -36,7 +34,7 @@ func (cm *ChannelManager) AddToChannel(client *Client, channelName string) error
 	return nil
 }
 
-func (cm *ChannelManager) RemoveClientFromChannel(client *Client, channelName string) error {
+func (cm *ChannelManager) RemoveFromChannel(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
 	cm.mu.RUnlock()
@@ -72,35 +70,37 @@ type Channel struct {
 	Name    string            `json:"name"`
 	Info    string            `json:"info"`
 	Clients map[string]*Client
-	mu      sync.RWMutex
+	Handler ChannelHandler
+	Mu      sync.RWMutex
 }
 
-func NewChannel(name, info string) *Channel {
+func NewChannel(name, info string, handler ChannelHandler) *Channel {
 	return &Channel{
 		Name:    name,
 		Info:    info,
 		Clients: make(map[string]*Client),
+		Handler: handler,
 	}
 }
 
 func (ch *Channel) AddToChannel(client *Client) {
-	ch.mu.Lock()
-	defer ch.mu.Unlock()
+	ch.Mu.Lock()
+	defer ch.Mu.Unlock()
 	ch.Clients[client.ID] = client
 }
 
 func (ch *Channel) RemoveFromChannel(clientID string) {
-	ch.mu.Lock()
-	defer ch.mu.Unlock()
+	ch.Mu.Lock()
+	defer ch.Mu.Unlock()
 	delete(ch.Clients, clientID)
 }
 
 
 // --- ChannelHandler interface ---
 type ChannelHandler interface {
-	HandleChannel(task string)	
+	HandleChannel(req *ClientRequest, ch *Channel)	
 	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
-	Broadcast(res *ChannelResponse) error
+	Broadcast(res *ChannelResponse, ch *Channel) error
 }
 
 type ChannelResponse struct {
@@ -111,4 +111,6 @@ type ChannelResponse struct {
 	Result interface{} `json:"result"`
 	Error string `json:"error,omitempty"`
 }
+
+
 
