@@ -38,6 +38,7 @@ func CreateConn(cm *core.ClientManager, chm *core.ChannelManager) http.HandlerFu
 			return
 		}
 
+
 		client := core.NewClient(data.ClientID, conn, chm)
 		cm.ClientAdd(client)
 

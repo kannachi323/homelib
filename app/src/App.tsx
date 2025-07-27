@@ -38,7 +38,7 @@ function App() {
             className={`
               h-full border-r flex flex-col justify-between items-center 
               transition-all duration-300
-              ${isOpen ? "w-[25vw]" : "w-[5vw]"}
+              ${isOpen ? "w-[25vw]" : "w-[7vw]"}
             `}
           >
             <Menu isOpen={isOpen} setIsOpen={setIsOpen} />

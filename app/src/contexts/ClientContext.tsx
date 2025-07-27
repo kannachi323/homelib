@@ -16,6 +16,7 @@ export type Client = {
 export type ClientRequest = {
     client_id: string;
     channel_name: string;
+    channel_type: string;
     task: string;
 }
 

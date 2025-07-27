@@ -10,21 +10,25 @@ export function UtilsTray({isOpen}: {isOpen: boolean}) {
     <ul className="w-full space-y-3 justify-center items-center">
 
         <li
-          className={`flex flex-row items-center w-full p-2 transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg`}
+          className={`flex flex-row items-center w-full transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg
+            ${isOpen ? 'p-2': 'p-0'}
+          `}
           onClick={() => navigate('/')}
         >
-          <FileExplorerTab isOpen={isOpen}/>
+          <FileExplorerTab isOpen={isOpen}/> 
         </li>
       
         <li
-          className={`flex flex-row items-center w-full p-2 transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg`}
+          className={`flex flex-row items-center w-full transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg
+            ${isOpen ? 'p-2': 'p-0'}`}
           onClick={() => navigate('/disk')}
         >
           <DiskScannerTab isOpen={isOpen} />
         </li>
 
         <li 
-          className={`flex flex-row items-center w-full p-2 transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg`}
+          className={`flex flex-row items-center w-full transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg
+            ${isOpen ? 'p-2': 'p-0'}`}
           onClick={() => navigate('/device')}
         >
           <DeviceScannerTab isOpen={isOpen} />

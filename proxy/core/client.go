@@ -12,6 +12,7 @@ import (
 
 type ClientRequest struct {
 	ClientID string     `json:"client_id"`
+	ChannelType string     `json:"channel_type"`
 	ChannelName string `json:"channel_name"`
 	Task    string `json:"task"`
 }
@@ -85,7 +86,10 @@ func (c *Client) StartWriter() {
 func (c *Client) HandleClient(client *Client, req *ClientRequest) error {
 	ch, err := c.ChannelManager.GetChannel(req.ChannelName)
 	if err != nil {
-		return err
+		ch, err = c.ChannelManager.CreateChannel(req.ChannelName, "", req.ChannelType)
+		if err != nil {
+			return err
+		}
 	}
 	if ch.Handler == nil {
 		return errors.New("no handler for channel")
@@ -93,7 +97,6 @@ func (c *Client) HandleClient(client *Client, req *ClientRequest) error {
 	ch.Handler.HandleChannel(client, req, ch)
 	return nil
 }
-
 
 func (c *Client) ClientClose() {
 	c.closeOnce.Do(func() {

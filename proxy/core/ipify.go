@@ -35,13 +35,28 @@ func (ic *IpifyHandler) CreateChannelResponse(clientID, channel, task string, su
 	}
 }
 
-func (ic *IpifyHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
+func (ic *IpifyHandler) BroadcastToClient(res *ChannelResponse, ch *Channel, client *Client) error {
 	b, err := json.Marshal(res)
 	if err != nil {
 		return err
 	}
 
-	
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
+	select {
+	case client.Outgoing <- b:
+	default:
+		log.Println("Client channel full:", client.ID)
+	}
+
+	return nil
+}
+
+func (ic *IpifyHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
+	b, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
 
 	ch.Mu.RLock()
 	defer ch.Mu.RUnlock()
@@ -62,11 +77,24 @@ func (ic *IpifyHandler) Broadcast(res *ChannelResponse, ch *Channel) error {
 // these are all the possible tasks for the ipify channel
 func (ic *IpifyHandler) JoinIpify(client *Client, req *ClientRequest, ch *Channel) {
 
+	// client already joined the channel
 	if err := ch.AddToChannel(client); err != nil {
 		log.Println("Error adding client to channel:", err)
+		res := ic.CreateChannelResponse(
+			req.ClientID,
+			req.ChannelName,
+			req.Task,
+			false,
+			nil,
+			err.Error(),
+		)
+		if err := ic.Broadcast(res, ch); err != nil {
+			log.Println("Error broadcasting join response:", err)
+		}
 		return
 	}
 
+	// let client join the chnnel
 	res := ic.CreateChannelResponse(
 		req.ClientID,
 		req.ChannelName,
@@ -81,7 +109,23 @@ func (ic *IpifyHandler) JoinIpify(client *Client, req *ClientRequest, ch *Channe
 	}
 }
 
+
 func (ic *IpifyHandler) GetLocalIP(client *Client, req *ClientRequest, ch *Channel) {
+	// client must first join the ipify channel
+	if !ch.ClientExists(client.ID) {
+		//let the client know they are not in the channel
+		ic.BroadcastToClient(&ChannelResponse{
+			ClientID: client.ID,
+			Channel:  req.ChannelName,
+			Task:     req.Task,
+			Success:  false,
+			Result:   nil,
+			Error:    "client not in ipify channel",
+		}, ch, client)
+		log.Println("Client not in ipify channel:", client.ID)
+		return
+	}
+
 	resp, err := http.Get("https://api.ipify.org?format=json")
 	if err != nil {
 		log.Println("Error fetching IP from ipify.org:", err)

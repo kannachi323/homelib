@@ -12,7 +12,7 @@ import { formatBytes } from '../utils/disks';
 
 export function DiskScannerTab({ isOpen } : {isOpen: boolean}) {
   return (
-    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center'} items-center w-full`}>
+    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center p-2'} items-center w-full`}>
       <FiHardDrive className="text-2xl"/>
       {isOpen && 
           <h1 className="text-lg font-bold whitespace-nowrap">

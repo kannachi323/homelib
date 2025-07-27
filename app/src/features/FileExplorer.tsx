@@ -18,7 +18,7 @@ import { useNavigate } from "react-router";
 export function FileExplorerTab({isOpen} : {isOpen: boolean}) {
   const navigate = useNavigate();
   return (
-    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center'} items-center w-full`}
+    <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center p-2'} items-center w-full`}
       onClick={() => navigate('/')}
     >
       <PiFolders className="text-2xl"/>

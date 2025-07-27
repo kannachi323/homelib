@@ -6,36 +6,72 @@ import (
 	"sync"
 )
 
-
+// ChannelManager manages multiple channels.
 type ChannelManager struct {
 	Channels map[string]*Channel
 	mu       sync.RWMutex
 }
 
 func NewChannelManager() *ChannelManager {
+	sysChannel, err := NewChannel("proxy:system", "server to send out notifications", &SystemHandler{})
+	if err != nil {
+		log.Println("Error creating system channel:", err)
+		return nil
+	}
+
 	return &ChannelManager{
 		Channels: map[string]*Channel{
-			"system": NewChannel("system", "proxy:system", &SystemHandler{}),
-			"ipify":  NewChannel("ipify", "proxy:ipify", &IpifyHandler{}),
+			"system": sysChannel,
 		},
 	}
 }
 
-// --- ChannelManager methods ---
+func (cm *ChannelManager) CreateChannel(name, info, channelType string) (*Channel, error) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	if ch, exists := cm.Channels[name]; exists {
+		return ch, errors.New("channel already exists")
+	}
+
+	var handler ChannelHandler
+	switch channelType {
+	case "system":
+		handler = &SystemHandler{}
+	case "ipify":
+		handler = &IpifyHandler{}
+	default:
+		return nil, errors.New("unknown channel type")
+	}
+
+	ch, err := NewChannel(name, info, handler)
+	if err != nil {
+		return nil, err
+	}
+
+	cm.Channels[name] = ch
+	return ch, nil
+}
+
+// ChannelAddClient adds a client to a channel, creating the channel if it doesn't exist.
 func (cm *ChannelManager) ChannelAddClient(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
 	cm.mu.RUnlock()
+
 	if !exists {
-		log.Println("Channel does not exist:", channelName)
 		return errors.New("channel does not exist")
 	}
 
-	channel.AddToChannel(client)
+	if err := channel.AddToChannel(client); err != nil {
+		log.Println("Error adding client to channel:", err)
+		return err
+	}
 
 	return nil
 }
 
+// ChannelRemoveClient removes a client from the given channel.
 func (cm *ChannelManager) ChannelRemoveClient(client *Client, channelName string) error {
 	cm.mu.RLock()
 	channel, exists := cm.Channels[channelName]
@@ -45,18 +81,19 @@ func (cm *ChannelManager) ChannelRemoveClient(client *Client, channelName string
 		return errors.New("channel does not exist")
 	}
 
-	channel.RemoveFromChannel(client.ID)
-	return nil
+	return channel.RemoveFromChannel(client.ID)
 }
 
+// ChannelRemoveAllClients removes a client from all channels.
 func (cm *ChannelManager) ChannelRemoveAllClients(clientID string) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	for _, ch := range cm.Channels {
-		ch.RemoveFromChannel(clientID)
+		_ = ch.RemoveFromChannel(clientID)
 	}
 }
 
+// GetChannel returns a channel by name.
 func (cm *ChannelManager) GetChannel(name string) (*Channel, error) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
@@ -67,8 +104,7 @@ func (cm *ChannelManager) GetChannel(name string) (*Channel, error) {
 	return channel, nil
 }
 
-// --- Channel methods ---
-
+// Channel represents a group of clients.
 type Channel struct {
 	Name    string            `json:"name"`
 	Info    string            `json:"info"`
@@ -77,21 +113,22 @@ type Channel struct {
 	Mu      sync.RWMutex
 }
 
-func NewChannel(name, info string, handler ChannelHandler) *Channel {
+// NewChannel creates a new Channel instance.
+func NewChannel(name, info string, handler ChannelHandler) (*Channel, error) {
 	return &Channel{
 		Name:    name,
 		Info:    info,
 		Clients: make(map[string]*Client),
 		Handler: handler,
-	}
+	}, nil
 }
 
+// AddToChannel adds a client to the channel if not already present.
 func (ch *Channel) AddToChannel(client *Client) error {
 	ch.Mu.Lock()
 	defer ch.Mu.Unlock()
 
 	if _, exists := ch.Clients[client.ID]; exists {
-		log.Println("client ", client.ID, "already in channel", ch.Name)
 		return errors.New("client already in channel")
 	}
 
@@ -99,7 +136,7 @@ func (ch *Channel) AddToChannel(client *Client) error {
 	return nil
 }
 
-
+// RemoveFromChannel removes a client from the channel if present.
 func (ch *Channel) RemoveFromChannel(clientID string) error {
 	ch.Mu.Lock()
 	defer ch.Mu.Unlock()
@@ -113,22 +150,28 @@ func (ch *Channel) RemoveFromChannel(clientID string) error {
 	return nil
 }
 
+// ClientExists returns true if the client is in the channel.
+func (ch *Channel) ClientExists(clientID string) bool {
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
 
-// --- ChannelHandler interface ---
+	_, exists := ch.Clients[clientID]
+	return exists
+}
+
+// ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
-	HandleChannel(client *Client, req *ClientRequest, ch *Channel)	
+	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
 	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
 	Broadcast(res *ChannelResponse, ch *Channel) error
 }
 
+// ChannelResponse represents a response to send on a channel.
 type ChannelResponse struct {
-	ClientID string `json:"client_id"`
-	Channel string `json:"channel"`
-	Task string `json:"task"`
-	Success bool  `json:"success"`
-	Result interface{} `json:"result"`
-	Error string `json:"error,omitempty"`
+	ClientID string      `json:"client_id"`
+	Channel  string      `json:"channel"`
+	Task     string      `json:"task"`
+	Success  bool        `json:"success"`
+	Result   interface{} `json:"result"`
+	Error    string      `json:"error,omitempty"`
 }
-
-
-
