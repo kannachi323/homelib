@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"sync"
@@ -38,8 +39,6 @@ func (cm *ChannelManager) CreateChannel(name, info, channelType string) (*Channe
 	switch channelType {
 	case "system":
 		handler = &SystemHandler{}
-	case "ipify":
-		handler = &IpifyHandler{}
 	default:
 		return nil, errors.New("unknown channel type")
 	}
@@ -150,6 +149,45 @@ func (ch *Channel) RemoveFromChannel(clientID string) error {
 	return nil
 }
 
+func (ch *Channel) SendToClient(res interface{}, client *Client) error {
+	b, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
+	select {
+	case client.Outgoing <- b:
+	default:
+		log.Println("Client channel full:", client.ID)
+	}
+
+	return nil
+}
+
+func (ch *Channel) Broadcast(res *ChannelResponse) error {
+	b, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
+	log.Println("Broadcasting to channel:", ch.Name, "with", len(ch.Clients), "clients")
+	for _, client := range ch.Clients {
+		if client.Disconnected.Load() {
+			continue
+		}
+		select {
+		case client.Outgoing <- b:
+		default:
+			log.Println("Client channel full:", client.ID)
+		}
+	}
+	return nil
+}
+
 // ClientExists returns true if the client is in the channel.
 func (ch *Channel) ClientExists(clientID string) bool {
 	ch.Mu.RLock()
@@ -161,9 +199,8 @@ func (ch *Channel) ClientExists(clientID string) bool {
 
 // ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
-	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
+	HandleChannel(client *Client, req interface{}, ch *Channel)
 	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
-	Broadcast(res *ChannelResponse, ch *Channel) error
 }
 
 // ChannelResponse represents a response to send on a channel.

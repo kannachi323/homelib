@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
+	"github.com/kannachi323/homelib/proxy/protob"
+	"google.golang.org/protobuf/proto"
 )
 
 type ClientRequest struct {
@@ -15,7 +17,19 @@ type ClientRequest struct {
 	ChannelType string     `json:"channel_type"`
 	ChannelName string `json:"channel_name"`
 	Task    string `json:"task"`
+	Data  []byte `json:"data"`
 }
+
+type BlobRequest struct {
+	ClientID    string `json:"client_id"`
+	ChannelType string `json:"channel_type"`
+	ChannelName string `json:"channel_name"`
+	Task        string `json:"task"`
+	FileName    string `json:"file_name"`
+	ChunkIndex  int    `json:"chunk_index"`
+	TotalChunks int    `json:"total_chunks"`
+}
+
 
 type Client struct {
 	ID       string
@@ -44,12 +58,18 @@ func (c *Client) StartReader() {
 	go func() {
 		defer c.ClientClose()
 		for {
-			_, msg, err := c.Conn.ReadMessage()
+			msgType, msg, err := c.Conn.ReadMessage()
 			if err != nil {
 				log.Println("WebSocket read error:", err)
 				return
 			}
-			c.Incoming <- msg
+			switch (msgType) {
+				case websocket.TextMessage:
+					c.Incoming <- msg
+				case websocket.BinaryMessage:
+					//my protocol buffers
+					c.HandleProtobuf(c, msg)
+			}			
 		}
 	}()
 }
@@ -58,14 +78,7 @@ func (c *Client) StartProcessor() {
 	//this goroutine processes messages from the Incoming channel
 	go func() {
 		for msg := range c.Incoming {
-			var clientRequest ClientRequest
-			err := json.Unmarshal(msg, &clientRequest)
-			if err != nil {
-				log.Println("Error unmarshalling client request:", err)
-				continue
-			}
-			log.Println("Processing client request:", clientRequest)
-			c.HandleClient(c, &clientRequest)
+			c.HandleClient(c, msg)
 		}
 	}()
 }
@@ -84,7 +97,12 @@ func (c *Client) StartWriter() {
 	}()
 }
 
-func (c *Client) HandleClient(client *Client, req *ClientRequest) error {
+func (c *Client) HandleClient(client *Client, msg []byte) error {
+	var req ClientRequest
+	if err := json.Unmarshal(msg, &req); err != nil {
+		log.Println("Invalid client request: ", err)
+		return errors.New("invalid client request")
+	}
 	ch, err := c.ChannelManager.GetChannel(req.ChannelName)
 	if err != nil {
 		ch, err = c.ChannelManager.CreateChannel(req.ChannelName, "", req.ChannelType)
@@ -96,6 +114,30 @@ func (c *Client) HandleClient(client *Client, req *ClientRequest) error {
 		return errors.New("no handler for channel")
 	}
 	ch.Handler.HandleChannel(client, req, ch)
+	return nil
+}
+
+func (c *Client) HandleProtobuf(client *Client, msg []byte) error {
+	var blob protob.Blob
+	if proto.Unmarshal(msg, &blob) != nil {
+		log.Println("Error unmarshalling protobuf message")
+		return errors.New("failed to unmarshal protobuf message")
+	}
+
+	ch, err := c.ChannelManager.GetChannel(blob.GetChannelName())
+	if err != nil {
+		ch, err = c.ChannelManager.CreateChannel(blob.GetChannelName(), "", "blob")
+		if err != nil {
+			log.Println("Error creating channel:", err)
+			return err	
+		}
+	}
+
+	if ch.Handler == nil {
+		log.Println("No handler for channel:", blob.GetChannelName())
+		return errors.New("no handler for channel")
+	}
+	ch.Handler.HandleChannel(client, &blob, ch)
 	return nil
 }
 
@@ -143,6 +185,18 @@ func (cm *ClientManager) ClientJoinChannel(clientID, channelName string) error {
 	client.ChannelManager.ChannelAddClient(client, channelName)
 	return nil
 }
+
+func (cm *ClientManager) GetClient(clientID string) (*Client, error) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	client, exists := cm.Clients[clientID]
+	if !exists {
+		return nil, errors.New("client not found")
+	}
+	return client, nil
+}
+
+
 
 
 

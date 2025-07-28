@@ -22,20 +22,6 @@ func (s *SystemHandler) HandleChannel(client *Client, req *ClientRequest, ch *Ch
 	case "join":
 		s.JoinSystem(client, req, ch)
 	}
-
-	res := s.CreateChannelResponse(
-		req.ClientID,
-		req.ChannelName,
-		req.Task,
-		true,
-		SystemResult{Message: "hey there"},
-		"",
-	)
-
-	// Broadcast to all connected clients
-	if err := s.Broadcast(res, ch); err != nil {
-		log.Println("Error broadcasting:", err)
-	}
 }
 
 func (s *SystemHandler) CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse {
@@ -85,7 +71,7 @@ func (s *SystemHandler) JoinSystem(client *Client, req *ClientRequest, ch *Chann
 		"",
 	)
 
-	if err := s.Broadcast(res, ch); err != nil {
+	if err := ch.SendToClient(res, client); err != nil {
 		log.Println("Error broadcasting join message:", err)
 	}
 }

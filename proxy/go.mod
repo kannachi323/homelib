@@ -1,8 +1,10 @@
-module proxy
+module github.com/kannachi323/homelib/proxy
 
 go 1.24.5
 
 require github.com/go-chi/cors v1.2.2
+
+require google.golang.org/protobuf v1.36.6 // indirect
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

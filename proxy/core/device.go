@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"time"
 )
 
@@ -13,8 +12,8 @@ type Device struct {
 	OwnerID string `json:"owner_id"`
 	IsCloud bool `json:"is_cloud"`
 	LastSync time.Time `json:"last_sync"`
-	
 }
+
 
 func NewDevice(id, name, deviceType string, isCloud bool, status int) *Device {
 	return &Device{
@@ -26,14 +25,7 @@ func NewDevice(id, name, deviceType string, isCloud bool, status int) *Device {
 	}
 }
 
-func ChangeDeviceStatus(device *Device, status int) error {
-	if device == nil {
-		return errors.New("device is not initialized")
-	}
-	
-	device.Status = status
-	return nil
+func (d *Device) SyncNow() {
+	d.LastSync = time.Now()
 }
-
-func (d *Device) 
 
