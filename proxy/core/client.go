@@ -20,6 +20,7 @@ type ClientRequest struct {
 type Client struct {
 	ID       string
 	Conn     *websocket.Conn
+	Device   *Device
 	Incoming chan []byte
 	Outgoing chan []byte
 	ChannelManager *ChannelManager

@@ -1,18 +1,18 @@
 import { useEffect } from "react";
-import { exists } from '@tauri-apps/plugin-fs';
-import { openPath } from "@tauri-apps/plugin-opener";
 
-import { downloadFile } from "../utils/files";
 import { useFileExplorer } from "../hooks/useFileExplorer";
-import { useClient } from "../hooks/useClient";
-import { FiltersBar } from "../features/FileExplorer";
 import { type File } from "../contexts/FileExplorerContext";
+import { useClient } from "../hooks/useClient";
+import { FiltersBar} from "../features/FileExplorer";
+
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
 import { JoinIpify, GetLocalIP } from "../utils/channels/ipify";
+import { openFile } from "../utils/files";
 
 export default function Home() {
   const { files, startAt, navigateTo  } = useFileExplorer();
+  const { conn, client } = useClient();
 
   useEffect(() => {
       //remember what path i was on last when component was mounted
@@ -26,37 +26,14 @@ export default function Home() {
   
     }, [startAt])
 
+
   async function handleFileClick(file: File) {
-    //this is local download path
-    let localDownloadPath = `homelib/local/Downloads/${file.name}`;
-    
     if (file.isDir) {
       navigateTo(file.path);
-      return;
+    } else {
+      openFile(file);
     }
-
-
-    try {
-      const fileExists = await exists(localDownloadPath);
-      
-      if (!fileExists) {
-        console.log('trying to download');
-        localDownloadPath = await downloadFile(file.path);
-      }
-
-      console.log("got here");
-
-      await openPath(localDownloadPath);
-
-    } catch (error) {
-      console.error("Error opening file:", error);
-    }
-    
-
   }
-
-  const { conn, client } = useClient();
-
 
   return (
     <div className="flex flex-col h-full max-h-screen">

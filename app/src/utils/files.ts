@@ -2,6 +2,10 @@ import { type File } from "../contexts/FileExplorerContext";
 import { writeFile } from '@tauri-apps/plugin-fs';
 import { basename } from "@tauri-apps/api/path";
 import { platform } from '@tauri-apps/plugin-os';
+import { exists } from '@tauri-apps/plugin-fs';
+import { openPath } from "@tauri-apps/plugin-opener";
+import { findHomelibRootOnDisk } from "./disks";
+
 
 export async function fetchFiles(setFiles : (files: File[]) => void, path : string) {
   try {
@@ -41,9 +45,8 @@ export async function downloadFile(filePath: string) : Promise<string> {
     const data = new Uint8Array(await blob.arrayBuffer());
 
     const fileName = await basename(filePath);
-    const downloadPath = await encodePathWithOS(`homelib/.local/Downloads/${fileName}`);
-    
-    console.log("Writing file to:", downloadPath);
+    const homelibRoot = await findHomelibRootOnDisk("/");
+    const downloadPath = await encodePathWithOS(`${homelibRoot}/${fileName}`);
     
     await writeFile(downloadPath, data);
 
@@ -68,3 +71,23 @@ export async function encodePathWithOS(inputPath: string): Promise<string> {
 
   return inputPath;
 }
+
+
+export async function openFile(file: File) {
+
+  try {
+    const fileExists = await exists(file.path);
+    
+    if (!fileExists) {
+      await downloadFile(file.path);
+    }
+
+    await openPath(file.path);
+
+  } catch (error) {
+    console.error("Error opening file:", error);
+  }
+  
+
+}
+
