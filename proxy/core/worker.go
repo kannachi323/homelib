@@ -11,15 +11,13 @@ type Worker struct {
 	ID int
 	Queue chan *protob.Blob
 	ChannelManager *ChannelManager
-	ClientManager *ClientManager
 }
 
-func NewWorker(id int, chm *ChannelManager, clm *ClientManager) *Worker {
+func NewWorker(id int, chm *ChannelManager) *Worker {
 	return &Worker{
 		ID:    id,
 		Queue: make(chan *protob.Blob, 32),
 		ChannelManager: chm,
-		ClientManager: clm,
 	}
 }
 
@@ -33,7 +31,7 @@ func (w *Worker) StartWorker() {
 				log.Printf("[Worker %d] Error getting channel %s: %v\n", w.ID, blob.GetChannelName(), err)
 				continue
 			}
-			dst, err := w.ClientManager.GetClient(blob.GetDst());
+			dst, err := channel.GetClient(blob.GetDst())
 			channel.SendToClient(blob, dst)
 		}
 	}()
@@ -45,15 +43,17 @@ type WorkerPool struct {
 	mu      sync.Mutex
 }
 
-func NewWorkerPool(num int, chm *ChannelManager, clm *ClientManager) *WorkerPool {
+func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
+
 	pool := &WorkerPool{
 		Workers: make([]*Worker, num),
 	}
 	for i := 0; i < num; i++ {
-		w := NewWorker(i, chm, clm)
+		w := NewWorker(i, chm)
 		pool.Workers[i] = w
 		w.StartWorker()
 	}
+	log.Println("[WorkerPool] Creating worker pool with", num, "workers")
 	return pool
 }
 
@@ -64,7 +64,7 @@ func (p *WorkerPool) Dispatch(blob *protob.Blob) {
 	worker := p.Workers[p.next]
 	select {
 	case worker.Queue <- blob:
-		// success     
+		log.Printf("[WorkerPool] Dispatched chunk #%d to worker %d", blob.ChunkIndex, worker.ID)
 	default:
 		log.Printf("[Worker %d] queue full, dropping chunk #%d\n", worker.ID, blob.ChunkIndex)
 	}

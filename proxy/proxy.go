@@ -4,8 +4,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 
-	"proxy/api"
-	"proxy/core"
+	"github.com/kannachi323/homelib/proxy/api"
+	"github.com/kannachi323/homelib/proxy/core"
 )
 
 type Proxy struct {

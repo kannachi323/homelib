@@ -14,7 +14,7 @@ type ChannelManager struct {
 }
 
 func NewChannelManager() *ChannelManager {
-	sysChannel, err := NewChannel("proxy:system", "server to send out notifications", &SystemHandler{})
+	sysChannel, err := NewChannel("proxy:system", "server to send out notifications", &TransferHandler{})
 	if err != nil {
 		log.Println("Error creating system channel:", err)
 		return nil
@@ -37,8 +37,8 @@ func (cm *ChannelManager) CreateChannel(name, info, channelType string) (*Channe
 
 	var handler ChannelHandler
 	switch channelType {
-	case "system":
-		handler = &SystemHandler{}
+	case "transfer":
+		handler = NewTransferHandler()
 	default:
 		return nil, errors.New("unknown channel type")
 	}
@@ -188,6 +188,17 @@ func (ch *Channel) Broadcast(res *ChannelResponse) error {
 	return nil
 }
 
+func (ch *Channel) GetClient(clientID string) (*Client, error) {
+	ch.Mu.RLock()
+	defer ch.Mu.RUnlock()
+
+	client, exists := ch.Clients[clientID]
+	if !exists {
+		return nil, errors.New("client not found in channel")
+	}
+	return client, nil
+}
+
 // ClientExists returns true if the client is in the channel.
 func (ch *Channel) ClientExists(clientID string) bool {
 	ch.Mu.RLock()
@@ -199,7 +210,7 @@ func (ch *Channel) ClientExists(clientID string) bool {
 
 // ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
-	HandleChannel(client *Client, req interface{}, ch *Channel)
+	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
 	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
 }
 

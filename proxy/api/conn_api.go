@@ -47,6 +47,5 @@ func CreateConn(cm *core.ClientManager, chm *core.ChannelManager) http.HandlerFu
 		client.StartReader()
 		client.StartProcessor()
 		client.StartWriter()
-
 	}
 }

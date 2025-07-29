@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useFileExplorer } from "../hooks/useFileExplorer";
 import { type File } from "../contexts/FileExplorerContext";
@@ -7,8 +7,8 @@ import { FiltersBar} from "../features/FileExplorer";
 
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
-import { JoinIpify, GetLocalIP } from "../utils/channels/ipify";
-import { openFile } from "../utils/files";
+import { openFile, uploadFiles } from "../utils/files";
+import { JoinTransferChannel, CreateTransferTask } from "../utils/channels/transfer";
 
 export default function Home() {
   const { files, startAt, navigateTo  } = useFileExplorer();
@@ -49,11 +49,49 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <button onClick={() => JoinIpify(client, conn)}>Join ipify</button>
-        <button onClick={() => GetLocalIP(client, conn)}>Get Local ip</button>
+        <button onClick={() => JoinTransferChannel(client, conn)} className="bg-white/50 p-2 rounded-lg">
+          Join Transfer Channel
+        </button>
+        <FileUploader />
       </div>
     </div>
 
   );
 
 }
+
+
+function FileUploader() {
+  const [selectedFiles, setSelectedFiles] = useState<globalThis.File[]>([]);
+
+  const { client, conn } = useClient(); 
+
+  if (!client || !conn) {
+    return undefined;
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    if (event.target.files) {
+      const filesArray = Array.from(event.target.files);
+      setSelectedFiles(filesArray);
+    }
+  }
+
+  return (
+    <div>
+      <input type="file" multiple onChange={handleFileSelect} />
+      <ul>
+        {selectedFiles.map((file, idx) => (
+          <li key={idx}>
+            {file.name} ({file.size} bytes)
+          </li>
+        ))}
+      </ul>
+       <button onClick={() => CreateTransferTask(client, conn, "upload")} className="bg-white/50 p-2 rounded-lg">Create transfer task</button>
+       <button onClick={() => uploadFiles(conn, client.id, client.id, `transfer:${client.id}`, selectedFiles)} className="bg-white/50 p-2 rounded-lg">
+          Upload Files
+        </button>
+    </div>
+  );
+}
+

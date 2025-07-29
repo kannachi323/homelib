@@ -1,16 +1,19 @@
 import { createContext } from "react";
 
 export type Device = {
+    id: string;
     name: string;
-    address: string; //this must be encoded before sending
-    port: number;
-    type: string;
+    deviceType: string;
+    ownerId: string;
+    isCloud: boolean;
+    lastSync: Date;
 }
 
 export type Client = {
     id: string;
     name: string;
     devices: Device[];
+    master: Device
 }
 
 export type ClientRequest = {
@@ -18,6 +21,7 @@ export type ClientRequest = {
     channel_name: string;
     channel_type: string;
     task: string;
+    body?: {dst: string; src: string};
 }
 
 export type ClientContextType = {

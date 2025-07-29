@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -17,19 +18,8 @@ type ClientRequest struct {
 	ChannelType string     `json:"channel_type"`
 	ChannelName string `json:"channel_name"`
 	Task    string `json:"task"`
-	Data  []byte `json:"data"`
+	Body  json.RawMessage `json:"body"`
 }
-
-type BlobRequest struct {
-	ClientID    string `json:"client_id"`
-	ChannelType string `json:"channel_type"`
-	ChannelName string `json:"channel_name"`
-	Task        string `json:"task"`
-	FileName    string `json:"file_name"`
-	ChunkIndex  int    `json:"chunk_index"`
-	TotalChunks int    `json:"total_chunks"`
-}
-
 
 type Client struct {
 	ID       string
@@ -67,8 +57,8 @@ func (c *Client) StartReader() {
 				case websocket.TextMessage:
 					c.Incoming <- msg
 				case websocket.BinaryMessage:
-					//my protocol buffers
-					c.HandleProtobuf(c, msg)
+					log.Println("Received binary message, processing as protobuf")
+					c.HandleProtobuf(msg)
 			}			
 		}
 	}()
@@ -78,7 +68,7 @@ func (c *Client) StartProcessor() {
 	//this goroutine processes messages from the Incoming channel
 	go func() {
 		for msg := range c.Incoming {
-			c.HandleClient(c, msg)
+			c.HandleClient(msg)
 		}
 	}()
 }
@@ -97,7 +87,7 @@ func (c *Client) StartWriter() {
 	}()
 }
 
-func (c *Client) HandleClient(client *Client, msg []byte) error {
+func (c *Client) HandleClient(msg []byte) error {
 	var req ClientRequest
 	if err := json.Unmarshal(msg, &req); err != nil {
 		log.Println("Invalid client request: ", err)
@@ -113,31 +103,32 @@ func (c *Client) HandleClient(client *Client, msg []byte) error {
 	if ch.Handler == nil {
 		return errors.New("no handler for channel")
 	}
-	ch.Handler.HandleChannel(client, req, ch)
+	ch.Handler.HandleChannel(c, &req, ch)
 	return nil
 }
 
-func (c *Client) HandleProtobuf(client *Client, msg []byte) error {
+func (c *Client) HandleProtobuf(msg []byte) error {
 	var blob protob.Blob
-	if proto.Unmarshal(msg, &blob) != nil {
-		log.Println("Error unmarshalling protobuf message")
-		return errors.New("failed to unmarshal protobuf message")
+	if err := proto.Unmarshal(msg, &blob); err != nil {
+		log.Println("failed to unmarshal blob:", err)
+		return errors.New("failed to unmarshal blob")
 	}
 
-	ch, err := c.ChannelManager.GetChannel(blob.GetChannelName())
+	//after we get a blob, first get the channel it belongs to
+	channel, err := c.ChannelManager.GetChannel(blob.GetChannelName())
 	if err != nil {
-		ch, err = c.ChannelManager.CreateChannel(blob.GetChannelName(), "", "blob")
-		if err != nil {
-			log.Println("Error creating channel:", err)
-			return err	
-		}
+		log.Printf("failed to get channel %s: %v\n", blob.GetChannelName(), err)
+		return errors.New("failed to get channel")
 	}
 
-	if ch.Handler == nil {
-		log.Println("No handler for channel:", blob.GetChannelName())
-		return errors.New("no handler for channel")
+	sessionKey := fmt.Sprintf("%s->%s", blob.Src, blob.Dst)
+	pool, ok := channel.Handler.(*TransferHandler).GetSession(sessionKey)
+	if !ok {
+		log.Printf("no active transfer session found for %s\n", sessionKey)
+		return errors.New("no active transfer session found")
 	}
-	ch.Handler.HandleChannel(client, &blob, ch)
+
+	pool.Dispatch(&blob)
 	return nil
 }
 

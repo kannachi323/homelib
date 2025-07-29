@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 
 import { ClientContext, type Client, type Device } from "./ClientContext";
 import { useAuthContext } from "../hooks/useAuth";
-import { JoinSystemChannel } from "../utils/channels/system";
 
 function CreateConn(client: Client) : WebSocket {
   if (!client) {
@@ -11,7 +10,6 @@ function CreateConn(client: Client) : WebSocket {
 
   const socket = new WebSocket("ws://localhost:8000/ws");
     socket.onopen = () => {
-      JoinSystemChannel(client, socket);
     };
 
     socket.onmessage = (event) => {
