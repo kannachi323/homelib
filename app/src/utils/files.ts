@@ -5,6 +5,7 @@ import { platform } from '@tauri-apps/plugin-os';
 import { exists } from '@tauri-apps/plugin-fs';
 import { openPath } from "@tauri-apps/plugin-opener";
 import { findHomelibRootOnDisk } from "./disks";
+import { join } from "@tauri-apps/api/path";
 import { Blob } from "../proto-gen/blob";
 import Long from "long";
 
@@ -35,7 +36,7 @@ export async function fetchFiles(setFiles : (files: File[]) => void, path : stri
   }
 }
 
-export async function downloadFile(filePath: string) : Promise<string> {
+export async function downloadFromFilePath(filePath: string) : Promise<string> {
   try {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/file?path=${encodeURIComponent(filePath)}`);
 
@@ -81,7 +82,7 @@ export async function openFile(file: File) {
     const fileExists = await exists(file.path);
     
     if (!fileExists) {
-      await downloadFile(file.path);
+      await downloadFromFilePath(file.path);
     }
 
     await openPath(file.path);
@@ -125,3 +126,31 @@ export async function uploadFiles(conn: WebSocket, src: string, dst: string, cha
   }
 }
 
+export async function writeFromBlobData(blobData : Uint8Array[]) {
+  try {
+    const fileName = "temp_file";
+    const homelibRoot = await findHomelibRootOnDisk("/");
+    const filePath = await join(homelibRoot || "", fileName + ".png");
+
+
+    await writeFile(filePath, convertBlobDataToArray(blobData));
+
+    console.log("File saved to:", filePath);
+  } catch (error) {
+    console.error("Failed to save file:", error);
+  }
+}
+
+function convertBlobDataToArray(chunks: Uint8Array[]): Uint8Array {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+
+  const result = new Uint8Array(totalLength);
+
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return result;
+}

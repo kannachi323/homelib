@@ -44,13 +44,14 @@ func (s *TransferHandler) CreateChannelResponse(clientID, channel, task string, 
 		ClientID: clientID,
 		Channel:  channel,
 		Task:     task,
+		Data: 	  result,
 		Success:  success,
-		Result:   result,
 		Error:    errMsg,
 	}
 }
 
 func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *Channel) error {
+	log.Println("Joining transfer channel:", req.ChannelName)
 	if err := ch.AddToChannel(client); err != nil {
 		log.Println("Error adding client to channel:", err)
 		return errors.New("failed to join transfer channel")
@@ -81,6 +82,8 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 		return errors.New("failed to parse transfer request body")
 	}
 
+	log.Println("Starting upload from", body.Src, "to", body.Dst)
+
 	//let the dst client know that we are uploading
 	//they must now start a transfer session
 	dstClient, err := ch.GetClient(body.Dst);
@@ -97,6 +100,27 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 	res := s.CreateChannelResponse(client.ID, req.ChannelName, req.Task, true, TransferResult{Message: "upload started"}, "")
 
 	ch.SendToClient(res, dstClient)
+
+	
+	//we now wait for worker pool to finish and then send a completion message
+	workerPool.OnDone(func() error {
+		res := s.CreateChannelResponse(
+			client.ID,
+			req.ChannelName,
+			req.Task,
+			true,
+			TransferResult{Message: "Upload completed"},
+			"",
+		)
+
+		if err := ch.SendToClient(res, dstClient); err != nil {
+			log.Println("Error sending upload completion message:", err)
+			return errors.New("failed to send upload completion message")
+		}
+
+		return nil
+	})	
+	
 	return nil
 }
 

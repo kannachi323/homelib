@@ -13,6 +13,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type ClientResponse struct {
+
+}
+
 type ClientRequest struct {
 	ClientID string     `json:"client_id"`
 	ChannelType string     `json:"channel_type"`
@@ -26,7 +30,7 @@ type Client struct {
 	Conn     *websocket.Conn
 	Device   *Device
 	Incoming chan []byte
-	Outgoing chan []byte
+	Outgoing chan OutgoingMessage
 	ChannelManager *ChannelManager
 	Disconnected atomic.Bool
 	closeOnce sync.Once
@@ -38,7 +42,7 @@ func NewClient(id string, conn *websocket.Conn, cm *ChannelManager) *Client {
 		ID:       id,
 		Conn:     conn,
 		Incoming: make(chan []byte, 256),
-		Outgoing: make(chan []byte, 256),
+		Outgoing: make(chan OutgoingMessage, 256),
 		ChannelManager: cm,
 	}
 }
@@ -79,7 +83,7 @@ func (c *Client) StartWriter() {
 	go func() {
 		defer c.ClientClose()
 		for msg := range c.Outgoing {
-			if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			if err := c.Conn.WriteMessage(msg.Type, msg.Payload); err != nil {
 				log.Println("WebSocket write error:", err)
 				return
 			}
@@ -127,7 +131,8 @@ func (c *Client) HandleProtobuf(msg []byte) error {
 		log.Printf("no active transfer session found for %s\n", sessionKey)
 		return errors.New("no active transfer session found")
 	}
-
+	
+	log.Println("Dispatching blob to worker pool for processing")
 	pool.Dispatch(&blob)
 	return nil
 }

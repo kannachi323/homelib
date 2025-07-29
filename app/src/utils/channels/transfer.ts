@@ -14,6 +14,8 @@ export function JoinTransferChannel(client: Client | null, conn : WebSocket | nu
 
     if (conn && conn.readyState === WebSocket.OPEN) {
       conn.send(JSON.stringify(req));
+    } else {
+        console.log("WebSocket connection is not open");
     }
 }
 
@@ -21,6 +23,8 @@ export function CreateTransferTask(client: Client | null, conn: WebSocket | null
     if (!client) {
         throw new Error("Client is not defined");
     }
+
+    console.log(client.id);
 
     const req : ClientRequest = {
         client_id: client.id,

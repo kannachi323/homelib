@@ -7,7 +7,7 @@ import { FiltersBar} from "../features/FileExplorer";
 
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
-import { openFile, uploadFiles } from "../utils/files";
+import { openFile, uploadFiles, writeFromBlobData } from "../utils/files";
 import { JoinTransferChannel, CreateTransferTask } from "../utils/channels/transfer";
 
 export default function Home() {
@@ -64,7 +64,7 @@ export default function Home() {
 function FileUploader() {
   const [selectedFiles, setSelectedFiles] = useState<globalThis.File[]>([]);
 
-  const { client, conn } = useClient(); 
+  const { client, conn, blobData } = useClient(); 
 
   if (!client || !conn) {
     return undefined;
@@ -90,6 +90,9 @@ function FileUploader() {
        <button onClick={() => CreateTransferTask(client, conn, "upload")} className="bg-white/50 p-2 rounded-lg">Create transfer task</button>
        <button onClick={() => uploadFiles(conn, client.id, client.id, `transfer:${client.id}`, selectedFiles)} className="bg-white/50 p-2 rounded-lg">
           Upload Files
+        </button>
+        <button onClick={() => writeFromBlobData(blobData)} className="bg-white/50 p-2 rounded-lg">
+          Write from Blob Data
         </button>
     </div>
   );

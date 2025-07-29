@@ -5,6 +5,10 @@ import (
 	"errors"
 	"log"
 	"sync"
+
+	"github.com/gorilla/websocket"
+	"github.com/kannachi323/homelib/proxy/protob"
+	"google.golang.org/protobuf/proto"
 )
 
 // ChannelManager manages multiple channels.
@@ -148,17 +152,36 @@ func (ch *Channel) RemoveFromChannel(clientID string) error {
 	delete(ch.Clients, clientID)
 	return nil
 }
-
 func (ch *Channel) SendToClient(res interface{}, client *Client) error {
-	b, err := json.Marshal(res)
+	var (
+		payload []byte
+		msgType int
+		err     error
+	)
+
+	switch v := res.(type) {
+	case *ChannelResponse:
+		payload, err  = json.Marshal(v)
+		msgType = websocket.TextMessage
+	case *protob.Blob:
+		log.Println("Sending Blob to client:", client.ID, "on channel:", ch.Name)
+		payload, err = proto.Marshal(v)
+		msgType = websocket.BinaryMessage
+	default:
+		log.Println("unsupported message type:", v)
+		return errors.New("unsupported message type")
+	}
+
 	if err != nil {
 		return err
 	}
 
 	ch.Mu.RLock()
 	defer ch.Mu.RUnlock()
+
 	select {
-	case client.Outgoing <- b:
+	case client.Outgoing <- OutgoingMessage{Type: msgType, Payload: payload}: // Send the new struct
+		log.Printf("Sent message to client %s on channel %s", client.ID, ch.Name)
 	default:
 		log.Println("Client channel full:", client.ID)
 	}
@@ -166,6 +189,7 @@ func (ch *Channel) SendToClient(res interface{}, client *Client) error {
 	return nil
 }
 
+// Also update ch.Broadcast
 func (ch *Channel) Broadcast(res *ChannelResponse) error {
 	b, err := json.Marshal(res)
 	if err != nil {
@@ -180,7 +204,7 @@ func (ch *Channel) Broadcast(res *ChannelResponse) error {
 			continue
 		}
 		select {
-		case client.Outgoing <- b:
+		case client.Outgoing <- OutgoingMessage{Type: websocket.TextMessage, Payload: b}: // Send as TextMessage
 		default:
 			log.Println("Client channel full:", client.ID)
 		}
@@ -220,6 +244,11 @@ type ChannelResponse struct {
 	Channel  string      `json:"channel"`
 	Task     string      `json:"task"`
 	Success  bool        `json:"success"`
-	Result   interface{} `json:"result"`
+	Data   interface{} `json:"result,omitempty"`
 	Error    string      `json:"error,omitempty"`
+}
+
+type OutgoingMessage struct {
+	Type int     `json:"type"`
+	Payload []byte    `json:"data"`
 }

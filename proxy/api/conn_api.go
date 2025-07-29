@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
@@ -25,27 +24,15 @@ func CreateConn(cm *core.ClientManager, chm *core.ChannelManager) http.HandlerFu
 		}
 		log.Println("WebSocket connection established")
 
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("Error reading initial message:", err)
-			conn.Close()
-			return
-		}
+		// TODO: need to feed onopen message without blocking main thread and add users to system channel
 
-		var data core.ClientRequest
-		if err := json.Unmarshal(msg, &data); err != nil {
-			log.Println("Invalid initial JSON:", err)
-			conn.Close()
-			return
-		}
-
-
-		client := core.NewClient(data.ClientID, conn, chm)
+		client := core.NewClient("88d0cd1e-912c-4d7f-9bc8-f9ef324d3df9", conn, chm)
 		cm.ClientAdd(client)
 
-		
+		// Let the reader handle the first message asynchronously
 		client.StartReader()
 		client.StartProcessor()
 		client.StartWriter()
 	}
 }
+
