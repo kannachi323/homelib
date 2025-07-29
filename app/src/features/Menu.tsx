@@ -8,6 +8,7 @@ export function Menu({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open:
     <div className="flex flex-col items-center w-full h-full p-1 bg-[#181818]">
       <AppLogo isOpen={isOpen} setIsOpen={setIsOpen} />
       
+      
       <UtilsTray isOpen={isOpen}/>
 
 
