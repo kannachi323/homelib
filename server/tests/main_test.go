@@ -17,10 +17,9 @@ import (
 	"strings"
 	"testing"
 
-	"homelib/api"
-	"homelib/db"
-	"homelib/server"
-	"homelib/utils"
+	"github.com/kannachi323/homelib/api"
+	"github.com/kannachi323/homelib/db"
+	"github.com/kannachi323/homelib/utils"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

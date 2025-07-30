@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gorilla/websocket"
-	"github.com/kannachi323/homelib/proxy/protob"
+	"github.com/kannachi323/homelib/protob"
 	"google.golang.org/protobuf/proto"
 )
 

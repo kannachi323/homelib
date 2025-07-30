@@ -1,4 +1,4 @@
-import { type ClientRequest, type Client } from "../../contexts/ClientContext";
+import { type ClientRequest, type Client } from "../../contexts/Client/ClientContext";
 
 export function JoinTransferChannel(client: Client | null, conn : WebSocket | null) {
     if (!client) {

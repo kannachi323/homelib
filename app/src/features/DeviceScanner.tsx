@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MdDevices } from "react-icons/md";
-import { type Device } from "../contexts/ClientContext";
+import { type Device } from "../contexts/Client/ClientContext";
 import { useClient } from "../hooks/useClient";
 
 import { Loading } from "../components/Loading";

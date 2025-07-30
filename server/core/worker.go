@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/kannachi323/homelib/proxy/protob"
+	"github.com/kannachi323/homelib/protob"
 )
 
 type Worker struct {

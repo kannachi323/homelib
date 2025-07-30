@@ -13,7 +13,7 @@ export function FileExplorer() {
   useLastPath();
   
   return (
-    <div className="flex items-center justify-between w-full h-[5vh] gap-4 p-2 bg-[#181818]">
+    <div className="flex items-center justify-between w-full h-[50px] gap-4 p-2 bg-[#181818]">
       <div className="flex flex-row p-2 h-full gap-4 items-center">
         <RiArrowLeftSLine className={`text-3xl rounded transition-all duration-200 
           ${backStack.length === 0 

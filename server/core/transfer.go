@@ -97,7 +97,7 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 	sessionKey := fmt.Sprintf("%s->%s", body.Src, body.Dst)
 	s.AddSession(sessionKey, workerPool)
 
-	res := s.CreateChannelResponse(client.ID, req.ChannelName, req.Task, true, TransferResult{Message: "upload started"}, "")
+	res := s.CreateChannelResponse(client.ID, req.ChannelName, req.Task, true, TransferResult{Message: "start"}, "")
 
 	ch.SendToClient(res, dstClient)
 
@@ -109,7 +109,7 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 			req.ChannelName,
 			req.Task,
 			true,
-			TransferResult{Message: "Upload completed"},
+			TransferResult{Message: "finish"},
 			"",
 		)
 

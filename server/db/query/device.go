@@ -3,10 +3,11 @@ package query
 import (
 	"context"
 	"fmt"
-	"homelib/db"
-	"homelib/models"
 	"log"
 	"time"
+
+	"github.com/kannachi323/homelib/db"
+	"github.com/kannachi323/homelib/models"
 
 	"github.com/google/uuid"
 )

@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { ClientContext } from '../contexts/ClientContext';
+import { ClientContext } from '../contexts/Client/ClientContext';
 
 export function useClient() {
     const context = useContext(ClientContext);

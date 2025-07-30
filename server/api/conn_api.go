@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/kannachi323/homelib/proxy/core"
+	"github.com/kannachi323/homelib/core"
 
 	"github.com/gorilla/websocket"
 )

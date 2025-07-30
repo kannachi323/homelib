@@ -2,10 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"homelib/db"
-	"homelib/db/query"
-	"homelib/middleware"
 	"net/http"
+
+	"github.com/kannachi323/homelib/db"
+	"github.com/kannachi323/homelib/db/query"
+	"github.com/kannachi323/homelib/middleware"
 )
 
 func GetUser(db *db.Database) http.HandlerFunc {

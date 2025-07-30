@@ -4,20 +4,28 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 
-	"homelib/api"
-	"homelib/db"
-	"homelib/middleware"
+	"github.com/kannachi323/homelib/api"
+	"github.com/kannachi323/homelib/core"
+	"github.com/kannachi323/homelib/db"
+	"github.com/kannachi323/homelib/middleware"
 )
 
 type Server struct {
 	Router *chi.Mux
 	DB    *db.Database
+	ClientManager *core.ClientManager
+	ChannelManager *core.ChannelManager
 }
 
 func CreateServer() *Server {
+	channelManager := core.NewChannelManager()
+	clientManager := core.NewClientManager()
+
     s := &Server{
 		Router: chi.NewRouter(),
 		DB: &db.Database{},
+		ClientManager: clientManager,
+		ChannelManager: channelManager,
 	}
 
 	s.MountHandlers()
@@ -63,9 +71,13 @@ func (s *Server) MountHandlers() {
 	s.Router.With(middleware.AuthMiddleware).Get("/user", api.GetUser(s.DB))
 
 
-	
-	
 	// Devices
 	s.Router.With(middleware.AuthMiddleware).Post("/device", api.AddDevice(s.DB))
 	s.Router.With(middleware.AuthMiddleware).Get("/devices", api.GetDevices(s.DB))
+
+
+
+	s.Router.Get("/ws", api.CreateConn(s.ClientManager, s.ChannelManager))
+	s.Router.Get("/ipify", api.GetPublicIP())
+
 }

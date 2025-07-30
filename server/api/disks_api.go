@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os/user"
 
-	"homelib/utils"
+	"github.com/kannachi323/homelib/utils"
 
 	"github.com/shirou/gopsutil/v4/disk"
 )

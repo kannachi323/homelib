@@ -2,12 +2,13 @@ package api
 
 import (
 	"encoding/json"
-	"homelib/db"
-	"homelib/db/query"
-	"homelib/middleware"
-	"homelib/models"
 	"log"
 	"net/http"
+
+	"github.com/kannachi323/homelib/db"
+	"github.com/kannachi323/homelib/db/query"
+	"github.com/kannachi323/homelib/middleware"
+	"github.com/kannachi323/homelib/models"
 )
 
 func AddDevice(db *db.Database) http.HandlerFunc {

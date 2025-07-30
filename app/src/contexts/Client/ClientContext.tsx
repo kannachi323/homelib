@@ -33,6 +33,9 @@ export type ClientContextType = {
     setClientDevices: (devices: Device[]) => void;
     blobData: Uint8Array[];
     setBlobData: (data: Uint8Array[]) => void;
+
+    taskQueue: Record<string, () => void>;
+    setTaskQueue: React.Dispatch<React.SetStateAction<Record<string, () => void>>>;
 };
 
 
