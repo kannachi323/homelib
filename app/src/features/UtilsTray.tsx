@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router";
 
 import { DiskScannerTab } from "./DiskScanner";
-import { MyHomelibTab } from "./MyHomelib";
+import { HomeTab } from "./MyHomelib";
 import { DeviceScannerTab } from "./DeviceScanner";
-import { NewFileMenuTab } from "../features/NewFileMenu";
+import { FileMenuTab } from "./FileMenu";
 
 export function UtilsTray({isOpen}: {isOpen: boolean}) {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export function UtilsTray({isOpen}: {isOpen: boolean}) {
           `}
           onClick={() => navigate('/')}
         >
-          <NewFileMenuTab isMenuOpen={isOpen}/> 
+          <FileMenuTab isMenuOpen={isOpen}/> 
         </li>
 
         <li
@@ -25,8 +25,10 @@ export function UtilsTray({isOpen}: {isOpen: boolean}) {
           `}
           onClick={() => navigate('/')}
         >
-          <MyHomelibTab isOpen={isOpen}/> 
+          <HomeTab isOpen={isOpen}/> 
         </li>
+
+        <li className="border"></li>
       
         <li
           className={`flex flex-row items-center w-full transition-colors duration-200 text-gray-200 hover:bg-gray-800 cursor-pointer rounded-lg

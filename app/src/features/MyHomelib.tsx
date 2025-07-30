@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 
 import { MdRefresh } from "react-icons/md";
-import { PiFolders } from "react-icons/pi";
 import { FaSort } from "react-icons/fa";
 import { CiGrid41 } from "react-icons/ci";
 import { CiBoxList } from "react-icons/ci";
@@ -15,26 +14,27 @@ import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
 
 import { useNavigate } from "react-router";
+import { Home } from "lucide-react";
 
 
 
-export function MyHomelibTab({isOpen} : {isOpen: boolean}) {
+export function HomeTab({isOpen} : {isOpen: boolean}) {
   const navigate = useNavigate();
   return (
     <div className={`flex flex-row ${isOpen ? 'justify-start gap-2' : 'justify-center p-2'} items-center w-full`}
       onClick={() => navigate('/')}
     >
-      <PiFolders className="text-2xl"/>
+      <Home />
       {isOpen && 
           <h1 className="text-lg font-bold whitespace-nowrap">
-            My Homelib
+            Home
           </h1>
         }
     </div>
   )
 }
 
-export function MyHomelib() {
+export function HomeView() {
   const { files, navigateTo, startAt } = useFileExplorer();
   
   useEffect(() => {
