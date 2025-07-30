@@ -20,6 +20,7 @@ interface FileExplorerContext {
   navigateTo: (newPath: string) => void;
   goBack: () => void;
   goForward: () => void;
+  fetchFiles: (setFiles: (files: File[]) => void, path: string) => Promise<void>;
 }
 
 export const FileExplorerContext = createContext<FileExplorerContext | undefined>(undefined);

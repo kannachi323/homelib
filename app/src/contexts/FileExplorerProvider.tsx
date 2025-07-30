@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { FileExplorerContext } from './FileExplorerContext';
 import { type File } from './FileExplorerContext';
-import { fetchFiles } from '../utils/files';
+
 
 
 export function FileExplorerProvider({ children }: { children: React.ReactNode }) {
@@ -58,6 +58,32 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
     }
   }, [forwardStack, currentPath]);
 
+  async function fetchFiles(setFiles : (files: File[]) => void, path : string) {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/files?path=${path}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        setFiles([]);
+        throw new Error(`Error fetching files: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.length > 0) {
+        setFiles(data);
+      }
+      
+
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
+      setFiles([]);
+    }
+  }
+
   useEffect(() => {
     fetchFiles(setFiles, currentPath);
   }, [currentPath]);
@@ -76,7 +102,8 @@ export function FileExplorerProvider({ children }: { children: React.ReactNode }
         goBack,
         goForward,
         forwardStack,
-        backStack
+        backStack, 
+        fetchFiles
       }}
     >
       {children}

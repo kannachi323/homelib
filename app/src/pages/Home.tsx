@@ -1,11 +1,21 @@
+import { useState, useRef } from "react";
+import { FiltersBar, HomeView} from "../features/MyHomelib";
 
-import { FiltersBar} from "../features/MyHomelib";
-
-
-import { MyHomelib } from "../features/MyHomelib"
 import { FileExplorer } from "../features/FileExplorer";
+import { useRightClick } from "../hooks/useRightClick";
+import { FileDialog } from "../features/FileMenu/FileMenu";
 
 export default function Home() {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [showFileDialog, setShowFileDialog] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useRightClick(ref, (e) => {
+    e.preventDefault();
+    setPos({ x: e.clientX, y: e.clientY });
+    setShowFileDialog(true);
+  });
+  
 
 
   return (
@@ -13,8 +23,13 @@ export default function Home() {
    
         <FileExplorer />
         <FiltersBar />
-
-        <MyHomelib />
+        <div ref={ref} className="flex-grow overflow-scroll h-[95vh]">
+          <HomeView />
+          {showFileDialog && 
+            <FileDialog pos={pos} onClose={() => setShowFileDialog(false)}/>
+          }
+              
+        </div>
     </div>
 
   );

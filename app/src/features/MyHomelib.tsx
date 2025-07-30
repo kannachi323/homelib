@@ -18,6 +18,8 @@ import { Home } from "lucide-react";
 
 
 
+
+
 export function HomeTab({isOpen} : {isOpen: boolean}) {
   const navigate = useNavigate();
   return (
@@ -36,6 +38,8 @@ export function HomeTab({isOpen} : {isOpen: boolean}) {
 
 export function HomeView() {
   const { files, navigateTo, startAt } = useFileExplorer();
+ 
+
   
   useEffect(() => {
       //remember what path i was on last when component was mounted
@@ -62,11 +66,17 @@ export function HomeView() {
       {files.map((file) => (
         <div key={file.name} className="flex flex-col items-center rounded hover:bg-white/10 p-2"
           onDoubleClick={() => handleFileClick(file)}
+          onContextMenu={(e) => {
+            console.log("Right click on file:", file.name);
+            e.stopPropagation();
+          }}
         >
           {file.isDir ? <img src={FOLDER_SVG} className="w-[64px] h-[64px]" /> : <img src={FILE_SVG} className="w-[64px] h-[64px]"/>}
           <p className="text-sm text-center truncate w-full">{file.name}</p>
         </div>
       ))}
+
+        
     </div>
   )
 }
@@ -146,4 +156,3 @@ export function FiltersBar() {
     </div>
   )
 }
-

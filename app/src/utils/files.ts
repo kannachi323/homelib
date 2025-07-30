@@ -10,31 +10,7 @@ import { Blob } from "../proto-gen/blob";
 import Long from "long";
 
 
-export async function fetchFiles(setFiles : (files: File[]) => void, path : string) {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/files?path=${path}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
 
-    if (!response.ok) {
-      setFiles([]);
-      throw new Error(`Error fetching files: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    if (data.length > 0) {
-      setFiles(data);
-    }
-    
-
-  } catch (error) {
-    console.error("Failed to fetch files:", error);
-    setFiles([]);
-  }
-}
 
 export async function downloadFromFilePath(filePath: string) : Promise<string> {
   try {
