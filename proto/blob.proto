@@ -17,4 +17,5 @@ message Blob {
   string file_type = 8;
   int32 chunk_index = 9;
   int32 total_chunks = 10;
+  string task_id = 11;
 }

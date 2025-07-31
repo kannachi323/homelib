@@ -44,6 +44,8 @@
       ]
     },
     "process:default",
-    "os:default"
+    "os:default",
+    "dialog:default",
+    "fs:default"
   ]
 }

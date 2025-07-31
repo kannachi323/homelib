@@ -26,13 +26,12 @@ type TransferStatus string
 
 const (
 	Join  				TransferStatus = "join"
-	Upload 				TransferStatus = "upload"
 	UploadStart 		TransferStatus = "upload-start"
 	UploadComplete 		TransferStatus = "upload-complete"
 	UploadError 		TransferStatus = "upload-error"
-	Download 			TransferStatus = "download"
 	DownloadStart 		TransferStatus = "download-start"
 	DownloadComplete 	TransferStatus = "download-complete"
+	DownloadError 		TransferStatus = "download-error"
 )
 
 func NewTransferHandler() *TransferHandler {
@@ -48,16 +47,17 @@ func (s *TransferHandler) HandleChannel(client *Client, req *ClientRequest, ch *
 	switch req.Task {
 	case string(Join):
 		s.JoinTransfer(client, req, ch)
-	case string(Upload):
-		s.Upload(client, req, ch)
+	case string(UploadStart):
+		s.UploadTransfer(client, req, ch)
 	}
 }
 
-func (s *TransferHandler) CreateChannelResponse(clientID, channel, task string, success bool, errMsg string) *ChannelResponse {
+func (s *TransferHandler) CreateChannelResponse(clientID, channel, task, taskId string, success bool, errMsg string) *ChannelResponse {
 	return &ChannelResponse{
 		ClientID: clientID,
 		Channel:  channel,
 		Task:     task,
+		TaskID:   taskId,
 		Success:  success,
 		Error:    errMsg,
 	}
@@ -74,6 +74,7 @@ func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *C
 		req.ClientID,
 		req.ChannelName,
 		req.Task,
+		"",
 		true,
 		"",
 	)
@@ -86,7 +87,7 @@ func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *C
 	return nil
 }
 
-func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel) error {
+func (s *TransferHandler) UploadTransfer(client *Client, req *ClientRequest, ch *Channel) error {
 	//req data should contain the src/dst clientID
 	var body TransferReqBody
 	if err := json.Unmarshal(req.Body, &body); err != nil {
@@ -106,21 +107,30 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 
 	//we create a worker pool to listen for blobs fromt the src client
 	workerPool := NewWorkerPool(4, client.ChannelManager)
-	sessionKey := fmt.Sprintf("%s->%s", body.Src, body.Dst)
+	sessionKey := fmt.Sprintf("%s->%s", body.Src, body.Dst) //TODO: generate uuidv4()
 	s.AddSession(sessionKey, workerPool)
 
-	//let client know we are starting the upload
-	res := s.CreateChannelResponse(client.ID, req.ChannelName, string(UploadStart), true, "")
+	res := s.CreateChannelResponse(
+		client.ID,
+		req.ChannelName,
+		string(UploadStart),
+		sessionKey,
+		true,
+		"",
+	)
 
-	ch.SendToClient(res, dstClient)
+	if err := ch.SendToClient(res, dstClient); err != nil {
+		log.Println("Error sending upload completion message:", err)
+		return errors.New("failed to send upload completion message")
+	}
 
-	
 	//we now wait for worker pool to finish and then send a completion message
 	workerPool.OnDone(func() error {
 		res := s.CreateChannelResponse(
 			client.ID,
 			req.ChannelName,
-			req.Task,
+			string(UploadComplete),
+			sessionKey,
 			true,
 			"",
 		)

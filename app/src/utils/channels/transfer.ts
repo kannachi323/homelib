@@ -1,5 +1,6 @@
 import { type ClientRequest, type Client } from "../../contexts/Client/ClientContext";
 import { type ChannelResponse } from "../../hooks/useChannels";
+import { getFetchFiles } from "../../globalFileExplorer";
 
 
 export type TransferStatus =
@@ -14,11 +15,9 @@ export type TransferStatus =
 
 export const TransferStatus = {
     Join: "join",
-    Upload: "upload",
     UploadStart: "upload-start",
     UploadComplete: "upload-complete",
     UploadError: "upload-error",
-    Download: "download",
     DownloadStart: "download-start",
     DownloadComplete: "download-complete",
 } as const;
@@ -62,19 +61,35 @@ export function createTransferTask(client: Client | null, conn: WebSocket | null
     if (conn && conn.readyState === WebSocket.OPEN) {
         conn.send(JSON.stringify(req));
     }
+
+    return 
 }
 
-export function handleTransfer(res: ChannelResponse, addTask: (taskId: string, callback: () => void) => void, removeTask: (taskId: string) => void) {
+export function onUploadComplete() {
+    
+    const fetchFiles = getFetchFiles();
+    if (!fetchFiles) {
+        console.error("Fetch files function is not defined");
+        return;
+    }
+    fetchFiles("");
+}
+
+export function handleTransfer(res: ChannelResponse, 
+    addTask: (taskId: string, callback: () => void) => void, 
+    removeTask: (taskId: string) => void)
+{
     switch (res.task) {
         case TransferStatus.Join:
             console.log(`Joined transfer channel: ${res.channel}`);
             break;
-        case TransferStatus.UploadStart:
-            console.log("Transfer started");
-            //we need to add this new task to the taskQueue
-            addTask(res.task_id, () => console.log(`Transfer task ${res.task_id} completed`));
+        case TransferStatus.UploadStart: {
+            console.log(`Upload started for taskID: ${res.task}`);
+            addTask(res.task_id, () => {});
             break;
+        }
         case TransferStatus.UploadComplete:
+            console.log(`Upload completed for taskID: ${res.task_id}`);
             removeTask(res.task_id);
             break;
         default:

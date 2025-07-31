@@ -36,11 +36,14 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       }
     };
     setClient(newClient);
+  }, [authChecked, user]);
 
+  useEffect(() => {
+    if (!client) return;
     const socket = new WebSocket("ws://localhost:8080/ws");
     socket.binaryType = "arraybuffer";
 
-    socket.onopen = () => joinTransferChannel(newClient, socket);
+    socket.onopen = () => joinTransferChannel(client, socket);
     socket.onmessage = (event) => {
       if (typeof event.data === "string") {
         const res = JSON.parse(event.data) as ChannelResponse;
@@ -60,7 +63,9 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socket.close();
     };
-  }, [authChecked, user]);
+
+  }, [client])
+
 
   return (
     <ClientContext.Provider value={{ client, setClient,

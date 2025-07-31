@@ -7,6 +7,8 @@ export type File = {
   isDir: boolean;
 }
 
+
+
 interface FileExplorerContext {
   currentPath: string;
   setCurrentPath: (path: string) => void;
@@ -20,7 +22,7 @@ interface FileExplorerContext {
   navigateTo: (newPath: string) => void;
   goBack: () => void;
   goForward: () => void;
-  fetchFiles: (setFiles: (files: File[]) => void, path: string) => Promise<void>;
+  fetchFiles: (path: string) => Promise<void>;
 }
 
 export const FileExplorerContext = createContext<FileExplorerContext | undefined>(undefined);

@@ -8,6 +8,8 @@ import { findHomelibRootOnDisk } from "./disks";
 import { join } from "@tauri-apps/api/path";
 import { Blob } from "../proto-gen/blob";
 import Long from "long";
+import { readFile } from '@tauri-apps/plugin-fs'
+import { v4 as uuidv4 } from 'uuid';
 
 
 
@@ -68,7 +70,7 @@ export async function openFile(file: File) {
   }
 }
 
-export async function uploadFiles(conn: WebSocket, src: string, dst: string, channelName: string, files: globalThis.File[]): Promise<void> {
+export async function upload(conn: WebSocket, srcClientID: string, dstClientID: string, channelName: string, files: globalThis.File[]): Promise<void> {
   const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
 
   for (const file of files) {
@@ -83,8 +85,8 @@ export async function uploadFiles(conn: WebSocket, src: string, dst: string, cha
       const arrayBuffer = await slice.arrayBuffer();
 
       const blob: Blob = {
-        src: src,
-        dst: dst,
+        src: srcClientID,
+        dst: dstClientID,
         channelName,
         timestamp: new Date().toISOString(),
         size: Long.fromNumber(file.size),
@@ -93,10 +95,10 @@ export async function uploadFiles(conn: WebSocket, src: string, dst: string, cha
         fileType: file.type,
         chunkIndex: i,
         totalChunks: totalChunks,
+        taskId: uuidv4(), 
       };
 
       const encoded = Blob.encode(blob).finish(); 
-      console.log(encoded);
       conn.send(encoded);
     }
   }
@@ -130,3 +132,39 @@ function convertBlobDataToArray(chunks: Uint8Array[]): Uint8Array {
 
   return result;
 }
+
+
+
+export async function convertToUploadFiles(files: File[]): Promise<globalThis.File[]> {
+  const globalFiles: globalThis.File[] = [];
+
+  for (const f of files) {
+    if (f.isDir) continue;
+
+    const data = await readFile(f.path);
+    const mime = guessMimeType(f.name);
+
+    const file = new File([new Uint8Array(data)], f.name, {
+      type: mime,
+      lastModified: Date.now(),
+    });
+
+    globalFiles.push(file);
+  }
+
+  return globalFiles;
+}
+
+function guessMimeType(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  switch (ext) {
+    case 'txt': return 'text/plain';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    case 'pdf': return 'application/pdf';
+    case 'json': return 'application/json';
+    default: return 'application/octet-stream';
+  }
+}
+

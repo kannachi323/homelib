@@ -34,6 +34,7 @@ type Blob struct {
 	FileType      string                 `protobuf:"bytes,8,opt,name=file_type,json=fileType,proto3" json:"file_type,omitempty"`
 	ChunkIndex    int32                  `protobuf:"varint,9,opt,name=chunk_index,json=chunkIndex,proto3" json:"chunk_index,omitempty"`
 	TotalChunks   int32                  `protobuf:"varint,10,opt,name=total_chunks,json=totalChunks,proto3" json:"total_chunks,omitempty"`
+	TaskId        string                 `protobuf:"bytes,11,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,12 +139,19 @@ func (x *Blob) GetTotalChunks() int32 {
 	return 0
 }
 
+func (x *Blob) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
 var File_blob_proto protoreflect.FileDescriptor
 
 const file_blob_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"blob.proto\x12\x04blob\x1a\x1fgoogle/protobuf/timestamp.proto\"\xac\x02\n" +
+	"blob.proto\x12\x04blob\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x02\n" +
 	"\x04Blob\x12\x10\n" +
 	"\x03src\x18\x01 \x01(\tR\x03src\x12\x10\n" +
 	"\x03dst\x18\x02 \x01(\tR\x03dst\x12 \n" +
@@ -156,7 +164,8 @@ const file_blob_proto_rawDesc = "" +
 	"\vchunk_index\x18\t \x01(\x05R\n" +
 	"chunkIndex\x12!\n" +
 	"\ftotal_chunks\x18\n" +
-	" \x01(\x05R\vtotalChunksB-Z+github.com/kannachi323/homelib/proxy/protobb\x06proto3"
+	" \x01(\x05R\vtotalChunks\x12\x17\n" +
+	"\atask_id\x18\v \x01(\tR\x06taskIdB'Z%github.com/kannachi323/homelib/protobb\x06proto3"
 
 var (
 	file_blob_proto_rawDescOnce sync.Once

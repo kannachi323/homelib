@@ -22,6 +22,7 @@ export interface Blob {
   fileType: string;
   chunkIndex: number;
   totalChunks: number;
+  taskId: string;
 }
 
 function createBaseBlob(): Blob {
@@ -36,6 +37,7 @@ function createBaseBlob(): Blob {
     fileType: "",
     chunkIndex: 0,
     totalChunks: 0,
+    taskId: "",
   };
 }
 
@@ -70,6 +72,9 @@ export const Blob: MessageFns<Blob> = {
     }
     if (message.totalChunks !== 0) {
       writer.uint32(80).int32(message.totalChunks);
+    }
+    if (message.taskId !== "") {
+      writer.uint32(90).string(message.taskId);
     }
     return writer;
   },
@@ -161,6 +166,14 @@ export const Blob: MessageFns<Blob> = {
           message.totalChunks = reader.int32();
           continue;
         }
+        case 11: {
+          if (tag !== 90) {
+            break;
+          }
+
+          message.taskId = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -182,6 +195,7 @@ export const Blob: MessageFns<Blob> = {
       fileType: isSet(object.fileType) ? globalThis.String(object.fileType) : "",
       chunkIndex: isSet(object.chunkIndex) ? globalThis.Number(object.chunkIndex) : 0,
       totalChunks: isSet(object.totalChunks) ? globalThis.Number(object.totalChunks) : 0,
+      taskId: isSet(object.taskId) ? globalThis.String(object.taskId) : "",
     };
   },
 
@@ -217,6 +231,9 @@ export const Blob: MessageFns<Blob> = {
     if (message.totalChunks !== 0) {
       obj.totalChunks = Math.round(message.totalChunks);
     }
+    if (message.taskId !== "") {
+      obj.taskId = message.taskId;
+    }
     return obj;
   },
 
@@ -235,13 +252,14 @@ export const Blob: MessageFns<Blob> = {
     message.fileType = object.fileType ?? "";
     message.chunkIndex = object.chunkIndex ?? 0;
     message.totalChunks = object.totalChunks ?? 0;
+    message.taskId = object.taskId ?? "";
     return message;
   },
 };
 
 function bytesFromBase64(b64: string): Uint8Array {
   if ((globalThis as any).Buffer) {
-    return Uint8Array.from(((globalThis as any).Buffer.from(b64, "base64")));
+    return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
   } else {
     const bin = globalThis.atob(b64);
     const arr = new Uint8Array(bin.length);
@@ -254,7 +272,7 @@ function bytesFromBase64(b64: string): Uint8Array {
 
 function base64FromBytes(arr: Uint8Array): string {
   if ((globalThis as any).Buffer) {
-    return (globalThis as any).Buffer.from(arr).toString("base64");
+    return globalThis.Buffer.from(arr).toString("base64");
   } else {
     const bin: string[] = [];
     arr.forEach((byte) => {

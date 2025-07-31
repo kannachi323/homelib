@@ -18,6 +18,11 @@ export type ChannelResponse = {
 export function useChannels() {
     const { addTask, removeTask } = useTaskQueue();
 
+
+    if (!addTask || !removeTask) {
+        throw new Error("Task queue is not initialized");
+    }
+
     const handlers : Record<string, (res: ChannelResponse) => void> = {
         "transfer": (res: ChannelResponse) => {
             handleTransfer(res, addTask, removeTask);
@@ -29,6 +34,8 @@ export function useChannels() {
             console.error(`Error in channel ${res.channel}: ${res.error}`);
             return;
         }
+
+        console.log(res);
 
         const handler = handlers[res.channel.split(":")[0]];
         if (handler) {

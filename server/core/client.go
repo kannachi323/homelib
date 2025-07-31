@@ -13,10 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type ClientResponse struct {
-
-}
-
 type ClientRequest struct {
 	ClientID string     `json:"client_id"`
 	ChannelType string     `json:"channel_type"`

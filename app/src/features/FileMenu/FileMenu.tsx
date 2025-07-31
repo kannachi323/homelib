@@ -5,11 +5,15 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { useElementSize } from '../../hooks/useElementSize';
 import { useFileExplorer } from '../../hooks/useFileExplorer';
 import { createFile, createFolder } from './helper';
-import { createTransferTask } from '../../utils/channels/transfer';
+import { createTransferTask, TransferStatus } from '../../utils/channels/transfer';
 import { useClient } from '../../hooks/useClient';
-import { uploadFiles } from '../../utils/files';
-import { useTaskQueue } from '../../hooks/useTaskQueue';
+import { convertToUploadFiles, upload} from '../../utils/files';
+import { type File } from '../../contexts/FileExplorerContext';
+import { stat } from '@tauri-apps/plugin-fs';
 
+
+import { open } from '@tauri-apps/plugin-dialog';
+import { useTaskQueue } from '../../hooks/useTaskQueue';
 
 
 export function FileMenuTab({ isMenuOpen }: { isMenuOpen: boolean }) {
@@ -71,7 +75,6 @@ export function FileDialog({ pos, onClose }: FileDialogProps) {
   const [finalPos, setFinalPos] = useState(pos);
 
   useEffect(() => {
-    console.log(window.innerWidth, window.innerHeight);
     if (pos.x + width > window.innerWidth) {
       pos.x = window.innerWidth - width - 10;
     }
@@ -114,20 +117,16 @@ function FileMenuContent() {
 }
 
 function CreateItems() {
-  const { setFiles, fetchFiles, currentPath } = useFileExplorer();
-  const { taskQueue } = useTaskQueue();
+  const { fetchFiles, currentPath } = useFileExplorer();
 
-  console.log(taskQueue);
-
-  
   async function handleNewFile() {
     await createFile('NewFile.txt', '/Users/mtccool668/homelib/empty.txt');
-    fetchFiles(setFiles, currentPath);
+    fetchFiles(currentPath);
   }
 
   async function handleNewFolder() {
     await createFolder('NewFolder', '/Users/mtccool668/homelib/NewFolder');
-    fetchFiles(setFiles, currentPath);
+    fetchFiles(currentPath);
   }
   return (
     <>
@@ -148,56 +147,87 @@ function CreateItems() {
   )
 }
 
-
 function UploadItems() {
-  const ref = useRef<HTMLInputElement>(null);
+  const { taskQueue } = useTaskQueue();
+  const { blobData } = useBlobData();
   const { client, conn } = useClient();
 
-  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  if (!client || !conn) {
+    console.error("Client or connection is not available");
+    return undefined;
+  }
+
+  
+  async function handleFileUpload() {
     if (!client || !conn) {
       console.error("Client or connection is not available");
       return;
     }
-    if (event.target.files) {
-      console.log(event.target.files);
-      const files = Array.from(event.target.files);
-      createTransferTask(client, conn, "upload-start");
-      uploadFiles(conn, client?.id, client?.id, `transfer:${client?.id}`, files)
+    const selected = await open({
+      multiple: true,
+      directory: false,
+    });
+
+    if (selected === null) {
+      console.log("No files selected");
+      return;
     }
+
+    const files : File[] = [];
+
+    for (const path of selected) {
+      const fileInfo = await stat(path);
+      files.push({
+        name: path.split('/').pop() || '',
+        path: path,
+        isDir: fileInfo.isDirectory,
+        size: fileInfo.size,
+      })
+    }
+
+    const uploadFiles = await convertToUploadFiles(files);
+
+    createTransferTask(client, conn, TransferStatus.UploadStart);
+
+    await upload(conn, client.id, client.id, `transfer:${client.id}`, uploadFiles);
+
+   
+    const task = taskQueue.find(t => t.task === `transfer:${client.id}`);
+
+    if (task)
+    
+    
+
   }
 
-  function handleFolderUpload(event : React.ChangeEvent<HTMLInputElement>) {
-    console.log(event);
-    return null;
+  async function handleFolderUpload() {
+    const folder = await open({
+      directory: true,
+      multiple: true
+    })
+    console.log(folder);
   }
 
-  function handleUpload() {
-    ref.current?.click();
-  }
+ 
+
   return (
     <>
       <b className="p-2 block">Upload</b>
-      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
-        onClick={() => handleUpload()}
+      <li
+        className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
+        onClick={() => handleFileUpload()}
       >
-        <input type="file" multiple style={{display: 'none'}}
-          onChange={(e) => handleFileUpload(e)}
-          ref={ref}
-        />
         <FileUp className="w-5 h-5 mr-2" />
         <p>File</p>
       </li>
-      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-b"
-        onClick={() => handleUpload()}
+     
+      <li
+        className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-b"
+        onClick={() => handleFolderUpload()}
       >
-        <input type="file" multiple style={{display: 'none'}}
-          onChange={(e) => handleFolderUpload(e)}
-          ref={ref}
-        />
         <FolderUp className="w-5 h-5 mr-2" />
         <p>Folder</p>
       </li>
     </>
-  )
+  );
 }
-

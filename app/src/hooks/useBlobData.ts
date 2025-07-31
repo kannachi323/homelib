@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { writeFile } from '@tauri-apps/plugin-fs';
+import { getCurrentPath } from '../globalFileExplorer';
 
 export function useBlobData() {
     const [blobData, setBlobData] = useState<Uint8Array>(new Uint8Array(0));
@@ -11,7 +13,17 @@ export function useBlobData() {
             newBlobData.set(uint8Array, prev.length);
             return newBlobData;
         });
+        console.log("Received binary data:", uint8Array);
     };
 
-    return {blobData, handleBinaryMessage};
+    const writeBlob = async () => {
+        const currentPath =  getCurrentPath();
+        await writeFile(currentPath, blobData);
+    };
+
+
+
+
+
+    return {blobData, handleBinaryMessage, writeBlob};
 }

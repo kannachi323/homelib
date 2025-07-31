@@ -236,7 +236,7 @@ func (ch *Channel) ClientExists(clientID string) bool {
 // ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
 	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
-	CreateChannelResponse(clientID, channel, task string, success bool, errMsg string) *ChannelResponse
+	CreateChannelResponse(clientID, channel, task, taskId string, success bool, errMsg string) *ChannelResponse
 }
 
 // ChannelResponse represents a response to send on a channel.
@@ -244,6 +244,7 @@ type ChannelResponse struct {
 	ClientID string      `json:"client_id"`
 	Channel  string      `json:"channel"`
 	Task     string      `json:"task"`
+	TaskID   string      `json:"task_id,omitempty"`
 	Success  bool        `json:"success"`
 	Error    string      `json:"error,omitempty"`
 }

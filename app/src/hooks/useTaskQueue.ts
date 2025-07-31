@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+
 export function useTaskQueue() {
     const [taskQueue, setTaskQueue] = useState<Record<string, () => void>>({});
 
@@ -10,14 +11,18 @@ export function useTaskQueue() {
         }));
     };
 
+   
+
     const removeTask = (taskId: string) => {
+        console.log(`Removing task: ${taskId}`);
         setTaskQueue((prev) => {
-            prev[taskId]?.();
-            const newQueue = { ...prev };
-            delete newQueue[taskId];
-            return newQueue;
+            const newQueue = { ...prev }; // copy first
+            newQueue[taskId]?.();         // call the callback
+            delete newQueue[taskId];      // then delete
+            return newQueue;              // return the new object
         });
-    }
+    };
+    
 
     return {addTask, removeTask, taskQueue};
 }
