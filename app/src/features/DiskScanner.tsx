@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router';
 
 
 import { Loading } from "../components/Loading";
-import { useDisk } from "../hooks/useDisk";
-import { type Disk } from '../contexts/DiskContext';
 import { formatBytes } from '../utils/disks';
+import { useDiskStore, type Disk } from '../stores/useDiskStore';
 
 
 
@@ -24,7 +23,7 @@ export function DiskScannerTab({ isOpen } : {isOpen: boolean}) {
 }
 
 export function DiskScannerWelcome() {
-  const { setScanStep } = useDisk();
+  const { setScanStep } = useDiskStore();
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-6 text-center space-y-6 bg-[#222121] text-white">
@@ -52,7 +51,7 @@ export function DiskScannerWelcome() {
 }
 
 export function DiskScannerScanDisks() {
-  const {setScanStep, setDisks} = useDisk();
+  const {setScanStep, setDisks} = useDiskStore();
   const [isDone, setIsDone] = useState(false);
 
 
@@ -104,7 +103,7 @@ export function DiskScannerScanDisks() {
 }
 
 export function DiskScannerResults() {
-  const { disks, setScanStep, setDisks } = useDisk();
+  const { disks, setScanStep, setDisks } = useDiskStore();
   const [selectedDisks, setSelectedDisks] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 

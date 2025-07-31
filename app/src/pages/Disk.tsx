@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { DiskScannerScanDisks, DiskScannerResults, DiskScannerWelcome } from "../features/DiskScanner";
-import { useDisk } from "../hooks/useDisk";
+import { useDiskStore } from "../stores/useDiskStore";
 
 
 
@@ -19,7 +19,7 @@ function renderStep(step: number) {
 }
 
 export default function DiskScan() {
-  const { scanStep, setScanStep } = useDisk();
+  const { scanStep, setScanStep } = useDiskStore();
 
   useEffect(() => {
     const lastScanStep = localStorage.getItem('lastScanStep');

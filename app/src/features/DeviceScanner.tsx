@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { MdDevices } from "react-icons/md";
-import { type Device } from "../contexts/Client/ClientContext";
-import { useClient } from "../hooks/useClient";
 
 import { Loading } from "../components/Loading";
+import { useClientStore, type Device } from "../stores/useClientStore";
 
 export function DeviceScannerTab({ isOpen } : {isOpen: boolean}) {
   return (
@@ -45,7 +44,7 @@ export function DeviceScannerWelcome({setScanStep}: {setScanStep: (step: number)
 
 
 export function DeviceScannerScanDevices({setScanStep} : {setScanStep: (step: number) => void}) {
-  const { setClientDevices } = useClient();
+  const { setDevices } = useClientStore();
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     async function scanDevice() {
@@ -61,7 +60,7 @@ export function DeviceScannerScanDevices({setScanStep} : {setScanStep: (step: nu
 
         const data: Device[] = await res.json();
         if (data.length > 0) {
-          setClientDevices(data);
+          setDevices(data);
           localStorage.setItem('devices', JSON.stringify(data));
         }
       } catch (err) {
@@ -75,7 +74,7 @@ export function DeviceScannerScanDevices({setScanStep} : {setScanStep: (step: nu
     }
 
     scanDevice();
-  }, [setScanStep, setClientDevices]);
+  }, [setScanStep, setDevices]);
 
 
 

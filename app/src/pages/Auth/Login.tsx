@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuthContext } from '../../hooks/useAuth';
-import { type User } from '../../contexts/AuthContext';
+import { useAuthStore, type User } from '../../stores/useAuthStore';
+
 
 export default function LogIn() {
-  const {setIsAuthenticated, setUser} = useAuthContext();
+  const {setIsAuthenticated, setUser} = useAuthStore();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -104,12 +104,6 @@ export default function LogIn() {
           <p className="text-blue-300 self-center">Don't have an account? <a href="/auth/signup" className="underline">Sign up</a></p>
         </form>
       </div>
-
-
-
-
-
-
     </div>
    
   );

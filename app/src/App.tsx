@@ -1,11 +1,9 @@
 import { Outlet, useNavigate } from "react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 
-import { DiskProvider } from "./contexts/DiskProvider";
-import { FileExplorerProvider } from "./contexts/FileExplorerProvider";
 import { Menu } from "./features/Menu";
-import { useAuthContext } from "./hooks/useAuth";
+import { useAuthStore } from "./stores/useAuthStore";
 
 
 
@@ -17,47 +15,38 @@ function App() {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const { isAuthenticated, setAuthChecked, authChecked } = useAuthContext();
+  const { isAuthenticated, authChecked, checkUser } = useAuthStore();
   const navigate = useNavigate();
 
+
+
   useEffect(() => {
-    if (!isAuthenticated) {
-      setAuthChecked(false);
-      navigate('/auth');
+    if (!authChecked) {
+      checkUser();
+    } else if (!isAuthenticated) {
+      navigate("/auth/login");
     }
-  }, [setAuthChecked, isAuthenticated, navigate]);
-
-
-  if (!authChecked) {
-    return null;
-  }
+  }, [authChecked, isAuthenticated]);
 
   return (
-    <DiskProvider>
-      <FileExplorerProvider>
-        <div className="flex flex-row w-screen h-screen overflow-hidde">
-      
-          {/* Sidebar */}
-          <aside
-            className={`flex flex-col justify-between items-center transition-all duration-300
-              ${isOpen ? "w-[225px]" : "w-[50px]"}
-            `}
-          >
-            <Menu isOpen={isOpen} setIsOpen={setIsOpen} />
-          </aside>
-
-          {/* Main Content */}
+    <div className="flex flex-row w-screen h-screen">
   
-            <main ref={ref} className={`flex flex-grow h-full`}>
-              <Outlet />
-            </main>
-        </div>
-  
+      {/* Sidebar */}
+      <aside
+        className={`flex flex-col justify-between items-center transition-all duration-300
+          ${isOpen ? "w-[225px]" : "w-[50px]"}
+        `}
+      >
+        <Menu isOpen={isOpen} setIsOpen={setIsOpen} />
+      </aside>
 
-      
-      </FileExplorerProvider>
-    </DiskProvider>
-        
+      {/* Main Content */}
+
+        <main ref={ref} className={`flex flex-grow h-full`}>
+          <Outlet />
+        </main>
+    </div>
+
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 
-import { useAuthContext } from "../../hooks/useAuth";
+import { useAuthStore } from "../../stores/useAuthStore";
 
 export default function Auth() {
   const location = useLocation();
@@ -9,7 +9,7 @@ export default function Auth() {
 
   const isLandingPage = location.pathname === "/auth";
 
-  const { authChecked, isAuthenticated } = useAuthContext();
+  const { authChecked, isAuthenticated } = useAuthStore();
 
 
   useEffect(() => {

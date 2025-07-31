@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-
-import { useFileExplorer } from "../hooks/useFileExplorer";
+import { useFileExplorerStore } from "../stores/useFileExplorerStore";
 import { useLastPath } from "../hooks/useLathPath";
 import { RiArrowRightSLine, RiArrowLeftSLine } from "react-icons/ri";
 import { MdSearch } from "react-icons/md";
@@ -8,7 +7,7 @@ import { MdSearch } from "react-icons/md";
 
 
 export function FileExplorer() {
-  const { goBack, goForward, forwardStack, backStack } = useFileExplorer();
+  const { goBack, goForward, forwardStack, backStack } = useFileExplorerStore();
 
   useLastPath();
   
@@ -55,7 +54,7 @@ export function SearchBar() {
 }
 
 export function PathSearch() {
-  const { currentPath, setCurrentPath, navigateTo } = useFileExplorer();
+  const { currentPath, setCurrentPath, navigateTo } = useFileExplorerStore();
   const [inputPath, setInputPath] = useState('');
 
 

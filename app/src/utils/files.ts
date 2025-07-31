@@ -1,16 +1,7 @@
-import { type File } from "../contexts/FileExplorerContext";
 import { writeFile } from '@tauri-apps/plugin-fs';
 import { basename } from "@tauri-apps/api/path";
 import { platform } from '@tauri-apps/plugin-os';
-import { exists } from '@tauri-apps/plugin-fs';
-import { openPath } from "@tauri-apps/plugin-opener";
-import { findHomelibRootOnDisk } from "./disks";
-import { join } from "@tauri-apps/api/path";
-import { Blob } from "../proto-gen/blob";
-import Long from "long";
-import { readFile } from '@tauri-apps/plugin-fs'
-import { v4 as uuidv4 } from 'uuid';
-
+import { findHomelibRootOnDisk } from './disks';
 
 
 
@@ -51,120 +42,5 @@ export async function encodePathWithOS(inputPath: string): Promise<string> {
   }
 
   return inputPath;
-}
-
-
-export async function openFile(file: File) {
-
-  try {
-    const fileExists = await exists(file.path);
-    
-    if (!fileExists) {
-      await downloadFromFilePath(file.path);
-    }
-
-    await openPath(file.path);
-
-  } catch (error) {
-    console.error("Error opening file:", error);
-  }
-}
-
-export async function upload(conn: WebSocket, srcClientID: string, dstClientID: string, channelName: string, files: globalThis.File[]): Promise<void> {
-  const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
-
-  for (const file of files) {
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-    console.log(`Uploading file: ${file.name}, Total Chunks: ${totalChunks}`);
-
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const slice = file.slice(start, end);
-      const arrayBuffer = await slice.arrayBuffer();
-
-      const blob: Blob = {
-        src: srcClientID,
-        dst: dstClientID,
-        channelName,
-        timestamp: new Date().toISOString(),
-        size: Long.fromNumber(file.size),
-        data: new Uint8Array(arrayBuffer),
-        fileName: file.name,
-        fileType: file.type,
-        chunkIndex: i,
-        totalChunks: totalChunks,
-        taskId: uuidv4(), 
-      };
-
-      const encoded = Blob.encode(blob).finish(); 
-      conn.send(encoded);
-    }
-  }
-}
-
-export async function writeFromBlobData(blobData : Uint8Array[]) {
-  try {
-    const fileName = "temp_file";
-    const homelibRoot = await findHomelibRootOnDisk("/");
-    const filePath = await join(homelibRoot || "", fileName + ".png");
-
-
-    await writeFile(filePath, convertBlobDataToArray(blobData));
-
-    console.log("File saved to:", filePath);
-  } catch (error) {
-    console.error("Failed to save file:", error);
-  }
-}
-
-function convertBlobDataToArray(chunks: Uint8Array[]): Uint8Array {
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-
-  const result = new Uint8Array(totalLength);
-
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return result;
-}
-
-
-
-export async function convertToUploadFiles(files: File[]): Promise<globalThis.File[]> {
-  const globalFiles: globalThis.File[] = [];
-
-  for (const f of files) {
-    if (f.isDir) continue;
-
-    const data = await readFile(f.path);
-    const mime = guessMimeType(f.name);
-
-    const file = new File([new Uint8Array(data)], f.name, {
-      type: mime,
-      lastModified: Date.now(),
-    });
-
-    globalFiles.push(file);
-  }
-
-  return globalFiles;
-}
-
-function guessMimeType(name: string): string {
-  const ext = name.split('.').pop()?.toLowerCase() || '';
-  switch (ext) {
-    case 'txt': return 'text/plain';
-    case 'jpg':
-    case 'jpeg': return 'image/jpeg';
-    case 'png': return 'image/png';
-    case 'pdf': return 'application/pdf';
-    case 'json': return 'application/json';
-    default: return 'application/octet-stream';
-  }
 }
 

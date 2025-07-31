@@ -20,10 +20,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-full w-full">
-   
         <FileExplorer />
         <FiltersBar />
-        <div ref={ref} className="flex-grow overflow-scroll h-[95vh]">
+        <div ref={ref} className="flex-grow h-[95vh] overflow-y-auto">
           <HomeView />
           {showFileDialog && 
             <FileDialog pos={pos} onClose={() => setShowFileDialog(false)}/>

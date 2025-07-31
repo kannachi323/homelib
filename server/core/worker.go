@@ -11,15 +11,13 @@ type Worker struct {
 	ID             int
 	Queue          chan *protob.Blob
 	ChannelManager *ChannelManager
-	wg             *sync.WaitGroup
 }
 
-func NewWorker(id int, chm *ChannelManager, wg *sync.WaitGroup) *Worker {
+func NewWorker(id int, chm *ChannelManager) *Worker {
 	return &Worker{
 		ID:             id,
 		Queue:          make(chan *protob.Blob, 32),
 		ChannelManager: chm,
-		wg:             wg,
 	}
 }
 
@@ -31,19 +29,33 @@ func (w *Worker) StartWorker() {
 			channel, err := w.ChannelManager.GetChannel(blob.GetChannelName())
 			if err != nil {
 				log.Printf("[Worker %d] Error getting channel %s: %v\n", w.ID, blob.GetChannelName(), err)
-				w.wg.Done()
 				continue
 			}
 			dst, err := channel.GetClient(blob.GetDst())
 			if err != nil {
 				log.Printf("[Worker %d] Error getting client %s: %v\n", w.ID, blob.GetDst(), err)
-				w.wg.Done()
+				
 				continue
 			}
 
 			channel.SendToClient(blob, dst)
 
-			w.wg.Done()
+			if blob.GetChunkIndex() == blob.GetTotalChunks()-1 {
+				res := &ChannelResponse{
+					ClientID: blob.Dst, 
+					Channel: blob.ChannelName,
+					Task:    "upload-complete",
+					TaskID:  "",
+					Success: true,
+					Error:   "",
+				}
+
+				if err := channel.SendToClient(res, dst); err != nil {
+					log.Printf("[Worker %d] Error sending upload completion message: %v", w.ID, err)
+				} else {
+					log.Printf("[Worker %d] Upload complete message sent to client %s", w.ID, blob.GetDst())
+				}
+			}
 		}
 	}()
 }
@@ -53,8 +65,7 @@ type WorkerPool struct {
 	Workers []*Worker
 	next    int
 	mu      sync.Mutex
-	wg      sync.WaitGroup
-	done    chan struct{}
+	done    chan ChannelResponse
 }
 
 func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
@@ -62,10 +73,10 @@ func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
 	pool := &WorkerPool{
 		Workers: make([]*Worker, num),
 		next: 0,
-		done: make(chan struct{}),
+		done: make(chan ChannelResponse),
 	}
 	for i := 0; i < num; i++ {
-		w := NewWorker(i, chm, &pool.wg)
+		w := NewWorker(i, chm)
 		pool.Workers[i] = w
 		w.StartWorker()
 	}
@@ -79,22 +90,11 @@ func (p *WorkerPool) Dispatch(blob *protob.Blob) {
 	p.next = (p.next + 1) % len(p.Workers)
 	p.mu.Unlock()
 
-	p.wg.Add(1)
+	
 	select {
 	case worker.Queue <- blob:
 		log.Printf("[WorkerPool] Dispatched chunk #%d to worker %d", blob.ChunkIndex, worker.ID)
 	default:
 		log.Printf("[Worker %d] queue full, dropping chunk #%d\n", worker.ID, blob.ChunkIndex)
-		p.wg.Done() // since it's dropped
 	}
-}
-
-//need to put this in a goroutine so it doesn't block main thread
-func (p *WorkerPool) OnDone(callback func() error) {
-	go func() {
-		p.wg.Wait()
-		if err := callback(); err != nil {
-			log.Println("[WorkerPool] OnDone callback error:", err)
-		}
-	}()
 }

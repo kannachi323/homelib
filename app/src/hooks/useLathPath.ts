@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useFileExplorer } from './useFileExplorer';
+import { useFileExplorerStore } from '../stores/useFileExplorerStore';
 
 export function useLastPath() {
-    const { currentPath, forwardStack, backStack }  = useFileExplorer()
+    const { currentPath, forwardStack, backStack }  = useFileExplorerStore()
 
     useEffect(() => {
         localStorage.setItem('lastPath', currentPath);

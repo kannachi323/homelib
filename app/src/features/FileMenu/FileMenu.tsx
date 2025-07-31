@@ -3,17 +3,16 @@ import { FilePlus, Plus, FolderPlus, FolderUp, FileUp } from 'lucide-react';
 
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useElementSize } from '../../hooks/useElementSize';
-import { useFileExplorer } from '../../hooks/useFileExplorer';
-import { createFile, createFolder } from './helper';
-import { createTransferTask, TransferStatus } from '../../utils/channels/transfer';
-import { useClient } from '../../hooks/useClient';
-import { convertToUploadFiles, upload} from '../../utils/files';
-import { type File } from '../../contexts/FileExplorerContext';
-import { stat } from '@tauri-apps/plugin-fs';
+
 
 
 import { open } from '@tauri-apps/plugin-dialog';
-import { useTaskQueue } from '../../hooks/useTaskQueue';
+import { open as openFile } from '@tauri-apps/plugin-fs';
+import { useFileExplorerStore } from '../../stores/useFileExplorerStore';
+import { useClientStore } from '../../stores/useClientStore';
+import { writeFile } from '@tauri-apps/plugin-fs';
+import { useBlobBufferStore } from '../../stores/useBlobBufferStore';
+import { useChannelStore, TransferStatus } from '../../stores/useChannelStore';
 
 
 export function FileMenuTab({ isMenuOpen }: { isMenuOpen: boolean }) {
@@ -117,15 +116,25 @@ function FileMenuContent() {
 }
 
 function CreateItems() {
-  const { fetchFiles, currentPath } = useFileExplorer();
+  const { fetchFiles } = useFileExplorerStore();
 
   async function handleNewFile() {
-    await createFile('NewFile.txt', '/Users/mtccool668/homelib/empty.txt');
+    const currentPath = useFileExplorerStore.getState().currentPath + "/New File";
+    try {
+        await writeFile(currentPath, new Uint8Array(0));
+    } catch (error) {
+        console.error("Error creating new file:", error);
+    }
     fetchFiles(currentPath);
   }
 
   async function handleNewFolder() {
-    await createFolder('NewFolder', '/Users/mtccool668/homelib/NewFolder');
+    const currentPath = useFileExplorerStore.getState().currentPath + '/New Folder';
+    try {
+        await writeFile(currentPath, new Uint8Array(0));
+    } catch (error) {
+        console.error("Error creating new file:", error);
+    }
     fetchFiles(currentPath);
   }
   return (
@@ -148,16 +157,14 @@ function CreateItems() {
 }
 
 function UploadItems() {
-  const { taskQueue } = useTaskQueue();
-  const { blobData } = useBlobData();
-  const { client, conn } = useClient();
+  const { client, conn } = useClientStore();
+  const { createTransferTask } = useChannelStore.getState();
 
   if (!client || !conn) {
     console.error("Client or connection is not available");
     return undefined;
   }
 
-  
   async function handleFileUpload() {
     if (!client || !conn) {
       console.error("Client or connection is not available");
@@ -173,42 +180,21 @@ function UploadItems() {
       return;
     }
 
-    const files : File[] = [];
-
-    for (const path of selected) {
-      const fileInfo = await stat(path);
-      files.push({
-        name: path.split('/').pop() || '',
-        path: path,
-        isDir: fileInfo.isDirectory,
-        size: fileInfo.size,
-      })
-    }
-
-    const uploadFiles = await convertToUploadFiles(files);
-
     createTransferTask(client, conn, TransferStatus.UploadStart);
-
-    await upload(conn, client.id, client.id, `transfer:${client.id}`, uploadFiles);
-
-   
-    const task = taskQueue.find(t => t.task === `transfer:${client.id}`);
-
-    if (task)
-    
-    
-
+    const fileHandle = await openFile(selected[0], { read: true, write: true, create: true });
+    for (const filePath of selected as string[]) {
+      if (!fileHandle) {
+        console.error(`Failed to open file: ${filePath}`);
+        break;
+      }
+      try {
+        const currentPath = useFileExplorerStore.getState().currentPath + '/' + filePath.split('/').pop();
+        await useBlobBufferStore.getState().sendFileBlobs(currentPath, fileHandle);
+      } catch (error) {
+        console.error(`Error sending file blobs for ${filePath}:`, error);
+      }
+    }
   }
-
-  async function handleFolderUpload() {
-    const folder = await open({
-      directory: true,
-      multiple: true
-    })
-    console.log(folder);
-  }
-
- 
 
   return (
     <>
@@ -223,7 +209,7 @@ function UploadItems() {
      
       <li
         className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-b"
-        onClick={() => handleFolderUpload()}
+        onClick={() => handleFileUpload()}
       >
         <FolderUp className="w-5 h-5 mr-2" />
         <p>Folder</p>

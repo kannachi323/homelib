@@ -181,7 +181,7 @@ func (ch *Channel) SendToClient(res interface{}, client *Client) error {
 	defer ch.Mu.RUnlock()
 
 	select {
-	case client.Outgoing <- OutgoingMessage{Type: msgType, Payload: payload}: // Send the new struct
+	case client.Outgoing <- OutgoingMessage{Type: msgType, Payload: payload}:
 		log.Printf("Sent message to client %s on channel %s", client.ID, ch.Name)
 	default:
 		log.Println("Client channel full:", client.ID)
@@ -205,7 +205,7 @@ func (ch *Channel) Broadcast(res *ChannelResponse) error {
 			continue
 		}
 		select {
-		case client.Outgoing <- OutgoingMessage{Type: websocket.TextMessage, Payload: b}: // Send as TextMessage
+		case client.Outgoing <- OutgoingMessage{Type: websocket.TextMessage, Payload: b}:
 		default:
 			log.Println("Client channel full:", client.ID)
 		}
@@ -243,6 +243,7 @@ type ChannelHandler interface {
 type ChannelResponse struct {
 	ClientID string      `json:"client_id"`
 	Channel  string      `json:"channel"`
+	ChannelType string	`json:"channel_type"`
 	Task     string      `json:"task"`
 	TaskID   string      `json:"task_id,omitempty"`
 	Success  bool        `json:"success"`

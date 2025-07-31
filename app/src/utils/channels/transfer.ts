@@ -1,5 +1,4 @@
-import { type ClientRequest, type Client } from "../../contexts/Client/ClientContext";
-import { type ChannelResponse } from "../../hooks/useChannels";
+
 import { getFetchFiles } from "../../globalFileExplorer";
 
 

@@ -6,15 +6,16 @@ import { CiGrid41 } from "react-icons/ci";
 import { CiBoxList } from "react-icons/ci";
 import { LiaFilterSolid } from "react-icons/lia";
 
-import { openFile } from "../utils/files";
 import { useClickOutside } from "../hooks/useClickOutside";
-import { useFileExplorer } from "../hooks/useFileExplorer";
-import { type File } from "../contexts/FileExplorerContext";
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
 
 import { useNavigate } from "react-router";
 import { Home } from "lucide-react";
+import { useFileExplorerStore, type File } from "../stores/useFileExplorerStore";
+import { openPath } from "@tauri-apps/plugin-opener";
+
+import { useClientStore } from "../stores/useClientStore";
 
 
 
@@ -37,33 +38,36 @@ export function HomeTab({isOpen} : {isOpen: boolean}) {
 }
 
 export function HomeView() {
-  const { files, navigateTo, startAt } = useFileExplorer();
- 
+  const { files, navigateTo, startAt, fetchFiles } = useFileExplorerStore();
 
-  
+  const { syncClient } = useClientStore();
+ 
   useEffect(() => {
       //remember what path i was on last when component was mounted
       const lastPath = localStorage.getItem('lastPath');
       if (lastPath) {
         startAt(lastPath);
-
+        fetchFiles(lastPath);
       } else {
         startAt('/homelib');
+        fetchFiles('/');
       }
-  
-    }, [startAt])
+
+      syncClient();
+    }, [startAt, syncClient, fetchFiles])
 
   async function handleFileClick(file: File) {
     if (file.isDir) {
       navigateTo(file.path);
     } else {
-      openFile(file);
+      await openPath(file.path);
     }
   }
+  
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-5 p-2">
-      {files.map((file) => (
+      {files?.map((file) => (
         <div key={file.name} className="flex flex-col items-center rounded hover:bg-white/10 p-2"
           onDoubleClick={() => handleFileClick(file)}
           onContextMenu={(e) => {
@@ -83,7 +87,7 @@ export function HomeView() {
 
 export function LayoutToggle() {
   const [isOpen, setIsOpen] = useState(false);
-  const { layout, setLayout } = useFileExplorer();
+  const { layout, setLayout } = useFileExplorerStore();
 
   const toggleRef = useRef<HTMLDivElement>(null);
 

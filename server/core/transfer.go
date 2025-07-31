@@ -56,6 +56,7 @@ func (s *TransferHandler) CreateChannelResponse(clientID, channel, task, taskId 
 	return &ChannelResponse{
 		ClientID: clientID,
 		Channel:  channel,
+		ChannelType: "transfer",
 		Task:     task,
 		TaskID:   taskId,
 		Success:  success,
@@ -123,25 +124,6 @@ func (s *TransferHandler) UploadTransfer(client *Client, req *ClientRequest, ch 
 		log.Println("Error sending upload completion message:", err)
 		return errors.New("failed to send upload completion message")
 	}
-
-	//we now wait for worker pool to finish and then send a completion message
-	workerPool.OnDone(func() error {
-		res := s.CreateChannelResponse(
-			client.ID,
-			req.ChannelName,
-			string(UploadComplete),
-			sessionKey,
-			true,
-			"",
-		)
-
-		if err := ch.SendToClient(res, dstClient); err != nil {
-			log.Println("Error sending upload completion message:", err)
-			return errors.New("failed to send upload completion message")
-		}
-
-		return nil
-	})	
 	
 	return nil
 }

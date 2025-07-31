@@ -1,15 +1,15 @@
-import { useDisk } from "../hooks/useDisk";
-import { type Disk } from "../contexts/DiskContext";
+
 import { FiHardDrive } from "react-icons/fi";
 
-import { useFileExplorer } from "../hooks/useFileExplorer";
 import { useNavigate } from "react-router";
 import { formatBytes, findHomelibRootOnDisk } from "../utils/disks";
+import { useDiskStore, type Disk } from "../stores/useDiskStore";
+import { useFileExplorerStore } from "../stores/useFileExplorerStore";
 
 export function DiskTray({isOpen} : {isOpen: boolean}) {
   const navigate = useNavigate();
-  const { disks, setCurrentDisk, currentDisk } = useDisk();
-  const { setCurrentPath } = useFileExplorer();
+  const { disks, setCurrentDisk, currentDisk } = useDiskStore();
+  const { setCurrentPath } = useFileExplorerStore();
 
   async function handleDiskSelect(disk: Disk) {
     setCurrentDisk(disk);
