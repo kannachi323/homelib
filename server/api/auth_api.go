@@ -60,19 +60,19 @@ func LogIn(db *db.Database) http.HandlerFunc {
 			return
 		}
 
-		id, err := query.CheckUser(db, req.Email, req.Password)
+		user, err := query.GetUser(db, req.Email, req.Password)
 		if err != nil {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return
 		}
 
-		accessToken, err := utils.GenerateAccessJWT(id)
+		accessToken, err := utils.GenerateAccessJWT(user.UserID)
 		if err != nil {
 			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 			return
 		}
 
-		refreshToken, err := utils.GenerateRefreshJWT(id)
+		refreshToken, err := utils.GenerateRefreshJWT(user.UserID)
 		if err != nil {
 			http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 			return
@@ -106,7 +106,11 @@ func LogIn(db *db.Database) http.HandlerFunc {
 			SameSite: http.SameSiteLaxMode,
 			MaxAge: refreshMaxAge,
 		})
-		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(UserResponse{
+			UserID:   user.UserID,
+			Email:    user.Email,
+			Name: user.Name,
+		})
 	}
 }
 

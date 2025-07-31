@@ -18,7 +18,8 @@ type ChannelManager struct {
 }
 
 func NewChannelManager() *ChannelManager {
-	sysChannel, err := NewChannel("proxy:system", "server to send out notifications", &TransferHandler{})
+	handler := NewTransferHandler()
+	transferChannel, err := NewChannel("proxy:system", "server to send out notifications", handler)
 	if err != nil {
 		log.Println("Error creating system channel:", err)
 		return nil
@@ -26,7 +27,7 @@ func NewChannelManager() *ChannelManager {
 
 	return &ChannelManager{
 		Channels: map[string]*Channel{
-			"system": sysChannel,
+			"system": transferChannel,
 		},
 	}
 }
@@ -235,7 +236,7 @@ func (ch *Channel) ClientExists(clientID string) bool {
 // ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
 	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
-	CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse
+	CreateChannelResponse(clientID, channel, task string, success bool, errMsg string) *ChannelResponse
 }
 
 // ChannelResponse represents a response to send on a channel.
@@ -244,7 +245,6 @@ type ChannelResponse struct {
 	Channel  string      `json:"channel"`
 	Task     string      `json:"task"`
 	Success  bool        `json:"success"`
-	Data   interface{} `json:"result,omitempty"`
 	Error    string      `json:"error,omitempty"`
 }
 

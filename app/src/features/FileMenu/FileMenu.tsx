@@ -5,8 +5,10 @@ import { useClickOutside } from '../../hooks/useClickOutside';
 import { useElementSize } from '../../hooks/useElementSize';
 import { useFileExplorer } from '../../hooks/useFileExplorer';
 import { createFile, createFolder } from './helper';
-import { CreateTransferTask } from '../../utils/channels/transfer';
+import { createTransferTask } from '../../utils/channels/transfer';
 import { useClient } from '../../hooks/useClient';
+import { uploadFiles } from '../../utils/files';
+import { useTaskQueue } from '../../hooks/useTaskQueue';
 
 
 
@@ -98,8 +100,26 @@ export function FileDialog({ pos, onClose }: FileDialogProps) {
 
 
 function FileMenuContent() {
-  const { setFiles, fetchFiles, currentPath } = useFileExplorer();
+  return (
+    <>
+      <ul className="text-sm border-b pb-1">
+        <CreateItems />
+      </ul>
 
+      <ul className="text-sm pt-1">
+        <UploadItems/>
+      </ul>
+    </>
+  );
+}
+
+function CreateItems() {
+  const { setFiles, fetchFiles, currentPath } = useFileExplorer();
+  const { taskQueue } = useTaskQueue();
+
+  console.log(taskQueue);
+
+  
   async function handleNewFile() {
     await createFile('NewFile.txt', '/Users/mtccool668/homelib/empty.txt');
     fetchFiles(setFiles, currentPath);
@@ -109,64 +129,75 @@ function FileMenuContent() {
     await createFolder('NewFolder', '/Users/mtccool668/homelib/NewFolder');
     fetchFiles(setFiles, currentPath);
   }
-
- 
-
   return (
     <>
-      <ul className="text-sm border-b pb-1">
-        <b className="p-2 block">Create</b>
-        <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-t"
-          onClick={() => handleNewFile()}
-        >
-          <FilePlus className="w-5 h-5 mr-2" />
-          <p>New file</p>
-        </li>
-        <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
-          onClick={() => handleNewFolder()}
-        >
-          <FolderPlus className="w-5 h-5 mr-2" />
-          <p>New folder</p>
-        </li>
-      </ul>
-      
+      <b className="p-2 block">Create</b>
+      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-t"
+        onClick={() => handleNewFile()}
+      >
+        <FilePlus className="w-5 h-5 mr-2" />
+        <p>New file</p>
+      </li>
+      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
+        onClick={() => handleNewFolder()}
+      >
+        <FolderPlus className="w-5 h-5 mr-2" />
+        <p>New folder</p>
+      </li>
     </>
-  );
+  )
 }
 
 
-function Uploader() {
+function UploadItems() {
   const ref = useRef<HTMLInputElement>(null);
   const { client, conn } = useClient();
 
-  function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    if (!client || !conn) {
+      console.error("Client or connection is not available");
+      return;
+    }
     if (event.target.files) {
+      console.log(event.target.files);
       const files = Array.from(event.target.files);
-      CreateTransferTask(client, conn, "upload");
+      createTransferTask(client, conn, "upload-start");
+      uploadFiles(conn, client?.id, client?.id, `transfer:${client?.id}`, files)
     }
   }
 
-  function handleFileUpload() {
+  function handleFolderUpload(event : React.ChangeEvent<HTMLInputElement>) {
+    console.log(event);
+    return null;
+  }
+
+  function handleUpload() {
     ref.current?.click();
   }
   return (
-    <ul className="text-sm pt-1">
+    <>
       <b className="p-2 block">Upload</b>
       <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
-        onClick={() => handleFileUpload()}
+        onClick={() => handleUpload()}
       >
         <input type="file" multiple style={{display: 'none'}}
-          onChange={handleFileSelect}
+          onChange={(e) => handleFileUpload(e)}
           ref={ref}
         />
         <FileUp className="w-5 h-5 mr-2" />
         <p>File</p>
       </li>
-      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-b">
+      <li className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c] rounded-b"
+        onClick={() => handleUpload()}
+      >
+        <input type="file" multiple style={{display: 'none'}}
+          onChange={(e) => handleFolderUpload(e)}
+          ref={ref}
+        />
         <FolderUp className="w-5 h-5 mr-2" />
         <p>Folder</p>
       </li>
-    </ul>
+    </>
   )
 }
 

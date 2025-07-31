@@ -22,6 +22,19 @@ type TransferResult struct {
 	Message string `json:"message"`
 }
 
+type TransferStatus string
+
+const (
+	Join  				TransferStatus = "join"
+	Upload 				TransferStatus = "upload"
+	UploadStart 		TransferStatus = "upload-start"
+	UploadComplete 		TransferStatus = "upload-complete"
+	UploadError 		TransferStatus = "upload-error"
+	Download 			TransferStatus = "download"
+	DownloadStart 		TransferStatus = "download-start"
+	DownloadComplete 	TransferStatus = "download-complete"
+)
+
 func NewTransferHandler() *TransferHandler {
 	return &TransferHandler{
 		Sessions: make(map[string]*WorkerPool),
@@ -30,21 +43,21 @@ func NewTransferHandler() *TransferHandler {
 
 func (s *TransferHandler) HandleChannel(client *Client, req *ClientRequest, ch *Channel) {
 	//we can get info from the client request body, it shoudl be of type TransferBody
+	log.Println("Handling transfer request:", req)
 
-	switch (req.Task) {
-	case "join":
+	switch req.Task {
+	case string(Join):
 		s.JoinTransfer(client, req, ch)
-	case "upload": 
+	case string(Upload):
 		s.Upload(client, req, ch)
 	}
 }
 
-func (s *TransferHandler) CreateChannelResponse(clientID, channel, task string, success bool, result interface{}, errMsg string) *ChannelResponse {
+func (s *TransferHandler) CreateChannelResponse(clientID, channel, task string, success bool, errMsg string) *ChannelResponse {
 	return &ChannelResponse{
 		ClientID: clientID,
 		Channel:  channel,
 		Task:     task,
-		Data: 	  result,
 		Success:  success,
 		Error:    errMsg,
 	}
@@ -62,7 +75,6 @@ func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *C
 		req.ChannelName,
 		req.Task,
 		true,
-		TransferResult{Message: "Joined Transfer channel"},
 		"",
 	)
 
@@ -97,7 +109,8 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 	sessionKey := fmt.Sprintf("%s->%s", body.Src, body.Dst)
 	s.AddSession(sessionKey, workerPool)
 
-	res := s.CreateChannelResponse(client.ID, req.ChannelName, req.Task, true, TransferResult{Message: "start"}, "")
+	//let client know we are starting the upload
+	res := s.CreateChannelResponse(client.ID, req.ChannelName, string(UploadStart), true, "")
 
 	ch.SendToClient(res, dstClient)
 
@@ -109,7 +122,6 @@ func (s *TransferHandler) Upload(client *Client, req *ClientRequest, ch *Channel
 			req.ChannelName,
 			req.Task,
 			true,
-			TransferResult{Message: "finish"},
 			"",
 		)
 

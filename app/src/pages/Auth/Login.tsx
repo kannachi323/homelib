@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuthContext } from '../../hooks/useAuth';
+import { type User } from '../../contexts/AuthContext';
 
 export default function LogIn() {
   const {setIsAuthenticated, setUser} = useAuthContext();
@@ -10,8 +11,6 @@ export default function LogIn() {
     password: '',
     remember_me: false
   });
-
-  console.log(formData);
 
   function handleChange(e : React.ChangeEvent<HTMLInputElement>) {
       const { name, value, checked, type } = e.target;
@@ -39,8 +38,10 @@ export default function LogIn() {
       });
 
       if (res.ok) {
+        console.log("Login successful");
+        const user : User = await res.json();
         setIsAuthenticated(true)
-        setUser({id: formData.email, username: formData.email.split('@')[0]})
+        setUser(user);
         navigate('/');
       } else {
         const errorData = await res.json();

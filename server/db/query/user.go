@@ -12,6 +12,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	UserID string
+	Name string
+	Email string
+}
+
 func CreateUser(db *db.Database, name string, email string, password string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -31,31 +37,37 @@ func CreateUser(db *db.Database, name string, email string, password string) err
 	return nil
 }
 
-func CheckUser(db *db.Database, email string, password string) (string, error) {
+func GetUser(db *db.Database, email string, password string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var id string
+	var name string
 	var hashedPassword string
-	query := `SELECT id, password FROM users WHERE email = ?`
+	query := `SELECT id, name, password FROM users WHERE email = ?`
 	
-	err := db.DB.QueryRowContext(ctx, query, email).Scan(&id, &hashedPassword)
+	err := db.DB.QueryRowContext(ctx, query, email).Scan(&id, &name, &hashedPassword)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Println("user not found")
-			return "", fmt.Errorf("user not found")
+			return nil, fmt.Errorf("user not found")
 		}
 		log.Printf("failed to get user by email: %v", err)
-		return "", fmt.Errorf("failed to get user by email: %w", err)
+		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
-
-	log.Println(hashedPassword)
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		return "", fmt.Errorf("invalid password: %w", err)
+		return nil, fmt.Errorf("invalid password: %w", err)
 	}
-	return id, nil
+	
+	user := &User{
+		UserID: id,
+		Name: name,
+		Email: email,
+	}
+
+	return user, nil
 }
 
 func GetUserEmail(db *db.Database, userID string) (string, error) {

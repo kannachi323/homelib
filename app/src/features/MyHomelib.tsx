@@ -147,7 +147,9 @@ export function FiltersBar() {
         
       </span>
       <span className="p-1 rounded ml-1 mr-auto hover:bg-white/20 cursor-pointer">
-        <MdRefresh className="text-xl" />
+        <MdRefresh className="text-xl" 
+          onClick={() => window.location.reload()}
+        />
       </span>
      
       <LayoutToggle />
