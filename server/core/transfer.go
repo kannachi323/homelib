@@ -3,40 +3,35 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 )
 
 type TransferHandler struct {
-	Sessions map[string]*WorkerPool
+	WorkerPools map[string]*WorkerPool //taskID -> WorkerPool
 	Mu       sync.RWMutex
 }
 
 type TransferReqBody struct {
-	Dst string `json:"dst"`
-	Src string `json:"src"`
+	SrcClientID string `json:"src_client_id"`
+	DstClientID string `json:"dst_client_id"`
 }
 
-type TransferResult struct {
-	Message string `json:"message"`
-}
-
-type TransferStatus string
+type TransferTask string
 
 const (
-	Join  				TransferStatus = "join"
-	UploadStart 		TransferStatus = "upload-start"
-	UploadComplete 		TransferStatus = "upload-complete"
-	UploadError 		TransferStatus = "upload-error"
-	DownloadStart 		TransferStatus = "download-start"
-	DownloadComplete 	TransferStatus = "download-complete"
-	DownloadError 		TransferStatus = "download-error"
+	Join  				TransferTask = "join"
+	UploadStart 		TransferTask = "upload-start"
+	UploadComplete 		TransferTask = "upload-complete"
+	UploadError 		TransferTask = "upload-error"
+	DownloadStart 		TransferTask = "download-start"
+	DownloadComplete 	TransferTask = "download-complete"
+	DownloadError 		TransferTask = "download-error"
 )
 
 func NewTransferHandler() *TransferHandler {
 	return &TransferHandler{
-		Sessions: make(map[string]*WorkerPool),
+		WorkerPools: make(map[string]*WorkerPool),
 	}
 }
 
@@ -48,37 +43,27 @@ func (s *TransferHandler) HandleChannel(client *Client, req *ClientRequest, ch *
 	case string(Join):
 		s.JoinTransfer(client, req, ch)
 	case string(UploadStart):
-		s.UploadTransfer(client, req, ch)
-	}
-}
-
-func (s *TransferHandler) CreateChannelResponse(clientID, channel, task, taskId string, success bool, errMsg string) *ChannelResponse {
-	return &ChannelResponse{
-		ClientID: clientID,
-		Channel:  channel,
-		ChannelType: "transfer",
-		Task:     task,
-		TaskID:   taskId,
-		Success:  success,
-		Error:    errMsg,
+		s.UploadStart(client, req, ch)
+	case string(UploadComplete):
+		s.UploadComplete(client, req, ch)
 	}
 }
 
 func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *Channel) error {
-	log.Println("Joining transfer channel:", req.ChannelName)
 	if err := ch.AddToChannel(client); err != nil {
 		log.Println("Error adding client to channel:", err)
 		return errors.New("failed to join transfer channel")
 	}
 
-	res := s.CreateChannelResponse(
-		req.ClientID,
-		req.ChannelName,
-		req.Task,
-		"",
-		true,
-		"",
-	)
+	res := &ChannelResponse{
+		ClientID: req.ClientID,
+		GroupID: req.GroupID,
+		ChannelName: req.ChannelName,
+		Task: req.Task,
+		TaskID: req.TaskID,
+		Success: true,
+		Error: "",
+	}
 
 	if err := ch.SendToClient(res, client); err != nil {
 		log.Println("Error broadcasting join message:", err)
@@ -88,7 +73,7 @@ func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *C
 	return nil
 }
 
-func (s *TransferHandler) UploadTransfer(client *Client, req *ClientRequest, ch *Channel) error {
+func (s *TransferHandler) UploadStart(client *Client, req *ClientRequest, ch *Channel) error {
 	//req data should contain the src/dst clientID
 	var body TransferReqBody
 	if err := json.Unmarshal(req.Body, &body); err != nil {
@@ -96,11 +81,12 @@ func (s *TransferHandler) UploadTransfer(client *Client, req *ClientRequest, ch 
 		return errors.New("failed to parse transfer request body")
 	}
 
-	log.Println("Starting upload from", body.Src, "to", body.Dst)
+	log.Println("Transfer request body:", body.DstClientID, body.SrcClientID)
 
-	//let the dst client know that we are uploading
-	//they must now start a transfer session
-	dstClient, err := ch.GetClient(body.Dst);
+	log.Println(ch.Clients);
+	
+
+	dstClient, err := ch.GetClient(body.DstClientID);
 	if err != nil {
 		log.Println("Error getting destination client:", err)
 		return errors.New("failed to get destination client")
@@ -108,37 +94,75 @@ func (s *TransferHandler) UploadTransfer(client *Client, req *ClientRequest, ch 
 
 	//we create a worker pool to listen for blobs fromt the src client
 	workerPool := NewWorkerPool(4, client.ChannelManager)
-	sessionKey := fmt.Sprintf("%s->%s", body.Src, body.Dst) //TODO: generate uuidv4()
-	s.AddSession(sessionKey, workerPool)
+	log.Println("Creating worker pool for task ID:", req.TaskID)
+	s.AddWorkerPool(req.TaskID, workerPool)
 
-	res := s.CreateChannelResponse(
-		client.ID,
-		req.ChannelName,
-		string(UploadStart),
-		sessionKey,
-		true,
-		"",
-	)
+	res := &ChannelResponse{
+		ClientID: req.ClientID,
+		GroupID: req.GroupID,
+		ChannelName: req.ChannelName,
+		Task: string(UploadStart),
+		TaskID: req.TaskID,
+		Success: true,
+		Error: "",
+	}
 
 	if err := ch.SendToClient(res, dstClient); err != nil {
-		log.Println("Error sending upload completion message:", err)
-		return errors.New("failed to send upload completion message")
+		log.Println("Error sending upload start message:", err)
+		return errors.New("failed to send upload start message")
 	}
-	
 	return nil
+}
+
+func (s *TransferHandler) UploadComplete(client *Client, req *ClientRequest, ch *Channel) error {
+	log.Println("Upload complete for task ID:", req.TaskID)
+
+	// Get the worker pool for this task
+	workerPool, ok := s.GetWorkerPool(req.TaskID)
+	if !ok {
+		log.Println("No worker pool found for task ID:", req.TaskID)
+		return errors.New("no worker pool found for task")
+	}
+
+	// Signal workers to stop processing
+	workerPool.mu.Lock()
+	defer workerPool.mu.Unlock()
+	for _, worker := range workerPool.Workers {
+		close(worker.Queue)
+	}
+
+	delete(s.WorkerPools, req.TaskID)
+
+	res := &ChannelResponse{
+		ClientID: req.ClientID,
+		GroupID: req.GroupID,
+		ChannelName: req.ChannelName,
+		Task: string(UploadComplete),
+		TaskID: req.TaskID,
+		Success: true,
+		Error: "",
+	}
+
+	if err := ch.Broadcast(res); err != nil {
+		log.Println("Error broadcasting upload complete message:", err)
+		return errors.New("failed to broadcast upload complete message")
+	}
+
+	return nil
+
 }
 
 
 //Helper funcs
-func (s *TransferHandler) AddSession(key string, pool *WorkerPool) {
+func (s *TransferHandler) AddWorkerPool(key string, pool *WorkerPool) {
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
-	s.Sessions[key] = pool
+	s.WorkerPools[key] = pool
 }
 
-func (s *TransferHandler) GetSession(key string) (*WorkerPool, bool) {
+func (s *TransferHandler) GetWorkerPool(key string) (*WorkerPool, bool) {
 	s.Mu.RLock()
 	defer s.Mu.RUnlock()
-	pool, ok := s.Sessions[key]
+	pool, ok := s.WorkerPools[key]
 	return pool, ok
 }

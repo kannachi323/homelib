@@ -3,7 +3,7 @@ import { FiltersBar, HomeView} from "../features/MyHomelib";
 
 import { FileExplorer } from "../features/FileExplorer";
 import { useRightClick } from "../hooks/useRightClick";
-import { FileDialog } from "../features/FileMenu/FileMenu";
+import { FileDialog } from "../features/FileMenu";
 
 export default function Home() {
   const [pos, setPos] = useState({ x: 0, y: 0 });

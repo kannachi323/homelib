@@ -4,7 +4,7 @@ import { useChannelStore } from './useChannelStore';
 
 export type Device = {
     id: string;
-    ownerID: string;
+    owner_id: string;
     name: string;
     size: number;
     isMaster: boolean;
@@ -12,6 +12,7 @@ export type Device = {
 
 export type Client = {
     id: string;
+    group_id: string;
     name: string;
     devices: Device[];
     master: Device
@@ -19,32 +20,31 @@ export type Client = {
 
 export type ClientRequest = {
     client_id: string;
+    group_id: string;
     channel_name: string;
-    channel_type: string;
     task: string;
-    body?: {dst: string; src: string};
+    task_id : string;
+    body?: object;
 }
 
 type ClientState = {
     client: Client | null;
     conn: WebSocket | null;
-
     devices: Device[];
 
-   
     setDevices: (devices: Device[]) => void;  
-
     syncClient: () => boolean;
 }
 
 function createClient(user: { id: string; name: string }): Client {
     const newClient : Client = {
         id: user.id,
+        group_id: user.id, // Assuming group_id is the same as user id for simplicity
         name: user.name,
         devices: [],
         master: {
             id: user.id, 
-            ownerID: user.id,
+            owner_id: user.id,
             name: user.name,
             size: 0,
             isMaster: true,
@@ -55,7 +55,6 @@ function createClient(user: { id: string; name: string }): Client {
 }
 
 function createConn(): WebSocket {
-    const client = useClientStore.getState().client;
     const joinTransferChannel = useChannelStore.getState().joinTransferChannel;
     const handleChannelResponse = useChannelStore.getState().handleChannelResponse;
     const handleBinaryResponse = useChannelStore.getState().handleBinaryResponse;
@@ -63,11 +62,12 @@ function createConn(): WebSocket {
     const socket = new WebSocket("ws://localhost:8080/ws");
     socket.binaryType = "arraybuffer";
 
-    socket.onopen = () => joinTransferChannel(client, socket);
+    socket.onopen = () => joinTransferChannel();
     socket.onmessage = (event) => {
         const data = event.data;
         if (typeof data === 'string') {
-            console.log('Received a string message:', data);
+            const parsedData = JSON.parse(data);
+            console.log('Received a string message:', parsedData);
             handleChannelResponse(data);
         } else if (data instanceof ArrayBuffer) {
             console.log('Received a binary message');

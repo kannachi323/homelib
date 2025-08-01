@@ -24,9 +24,9 @@ const (
 
 type Blob struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Src           string                 `protobuf:"bytes,1,opt,name=src,proto3" json:"src,omitempty"`
-	Dst           string                 `protobuf:"bytes,2,opt,name=dst,proto3" json:"dst,omitempty"`
-	ChannelName   string                 `protobuf:"bytes,3,opt,name=channelName,proto3" json:"channelName,omitempty"`
+	SrcClientID   string                 `protobuf:"bytes,1,opt,name=srcClientID,proto3" json:"srcClientID,omitempty"`
+	DstClientID   string                 `protobuf:"bytes,2,opt,name=dstClientID,proto3" json:"dstClientID,omitempty"`
+	GroupID       string                 `protobuf:"bytes,3,opt,name=groupID,proto3" json:"groupID,omitempty"`
 	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	Size          int64                  `protobuf:"varint,5,opt,name=size,proto3" json:"size,omitempty"`
 	Data          []byte                 `protobuf:"bytes,6,opt,name=data,proto3" json:"data,omitempty"`
@@ -69,23 +69,23 @@ func (*Blob) Descriptor() ([]byte, []int) {
 	return file_blob_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Blob) GetSrc() string {
+func (x *Blob) GetSrcClientID() string {
 	if x != nil {
-		return x.Src
+		return x.SrcClientID
 	}
 	return ""
 }
 
-func (x *Blob) GetDst() string {
+func (x *Blob) GetDstClientID() string {
 	if x != nil {
-		return x.Dst
+		return x.DstClientID
 	}
 	return ""
 }
 
-func (x *Blob) GetChannelName() string {
+func (x *Blob) GetGroupID() string {
 	if x != nil {
-		return x.ChannelName
+		return x.GroupID
 	}
 	return ""
 }
@@ -151,11 +151,11 @@ var File_blob_proto protoreflect.FileDescriptor
 const file_blob_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"blob.proto\x12\x04blob\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x02\n" +
-	"\x04Blob\x12\x10\n" +
-	"\x03src\x18\x01 \x01(\tR\x03src\x12\x10\n" +
-	"\x03dst\x18\x02 \x01(\tR\x03dst\x12 \n" +
-	"\vchannelName\x18\x03 \x01(\tR\vchannelName\x128\n" +
+	"blob.proto\x12\x04blob\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdd\x02\n" +
+	"\x04Blob\x12 \n" +
+	"\vsrcClientID\x18\x01 \x01(\tR\vsrcClientID\x12 \n" +
+	"\vdstClientID\x18\x02 \x01(\tR\vdstClientID\x12\x18\n" +
+	"\agroupID\x18\x03 \x01(\tR\agroupID\x128\n" +
 	"\ttimestamp\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x12\n" +
 	"\x04size\x18\x05 \x01(\x03R\x04size\x12\x12\n" +
 	"\x04data\x18\x06 \x01(\fR\x04data\x12\x1b\n" +

@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -15,9 +14,10 @@ import (
 
 type ClientRequest struct {
 	ClientID string     `json:"client_id"`
-	ChannelType string     `json:"channel_type"`
+	GroupID string	  `json:"group_id"`
 	ChannelName string `json:"channel_name"`
 	Task    string `json:"task"`
+	TaskID string `json:"task_id"`
 	Body  json.RawMessage `json:"body"`
 }
 
@@ -58,7 +58,7 @@ func (c *Client) StartReader() {
 					c.Incoming <- msg
 				case websocket.BinaryMessage:
 					log.Println("Received binary message, processing as protobuf")
-					c.HandleProtobuf(msg)
+					c.HandleBinaryMessage(msg)
 			}			
 		}
 	}()
@@ -68,7 +68,7 @@ func (c *Client) StartProcessor() {
 	//this goroutine processes messages from the Incoming channel
 	go func() {
 		for msg := range c.Incoming {
-			c.HandleClient(msg)
+			c.HandleClientRequest(msg)
 		}
 	}()
 }
@@ -87,15 +87,15 @@ func (c *Client) StartWriter() {
 	}()
 }
 
-func (c *Client) HandleClient(msg []byte) error {
+func (c *Client) HandleClientRequest(msg []byte) error {
 	var req ClientRequest
 	if err := json.Unmarshal(msg, &req); err != nil {
 		log.Println("Invalid client request: ", err)
 		return errors.New("invalid client request")
 	}
-	ch, err := c.ChannelManager.GetChannel(req.ChannelName)
+	ch, err := c.ChannelManager.GetChannel(req.GroupID)
 	if err != nil {
-		ch, err = c.ChannelManager.CreateChannel(req.ChannelName, "", req.ChannelType)
+		ch, err = c.ChannelManager.CreateChannel(req.GroupID, req.ChannelName, "")
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (c *Client) HandleClient(msg []byte) error {
 	return nil
 }
 
-func (c *Client) HandleProtobuf(msg []byte) error {
+func (c *Client) HandleBinaryMessage(msg []byte) error {
 	var blob protob.Blob
 	if err := proto.Unmarshal(msg, &blob); err != nil {
 		log.Println("failed to unmarshal blob:", err)
@@ -115,16 +115,16 @@ func (c *Client) HandleProtobuf(msg []byte) error {
 	}
 
 	//after we get a blob, first get the channel it belongs to
-	channel, err := c.ChannelManager.GetChannel(blob.GetChannelName())
+	channel, err := c.ChannelManager.GetChannel(blob.GetGroupID())
 	if err != nil {
-		log.Printf("failed to get channel %s: %v\n", blob.GetChannelName(), err)
+		log.Printf("failed to get channel %s: %v\n", blob.GetGroupID(), err)
 		return errors.New("failed to get channel")
 	}
-
-	sessionKey := fmt.Sprintf("%s->%s", blob.Src, blob.Dst)
-	pool, ok := channel.Handler.(*TransferHandler).GetSession(sessionKey)
+	
+	log.Println("getting worker pool for task ID:", blob.GetTaskId())
+	pool, ok := channel.Handler.(*TransferHandler).GetWorkerPool(blob.GetTaskId())
 	if !ok {
-		log.Printf("no active transfer session found for %s\n", sessionKey)
+		log.Printf("no active transfer session found for %s\n", blob.GetTaskId())
 		return errors.New("no active transfer session found")
 	}
 	

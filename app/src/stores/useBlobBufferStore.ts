@@ -6,6 +6,7 @@ import { useClientStore } from './useClientStore';
 import Long from 'long';
 
 
+
 type BufferHandle = {
   fileHandle: FileHandle;
   totalBlobs: number;
@@ -15,8 +16,8 @@ type BufferHandle = {
 type BlobBufferStore = {
   buffers: Map<string, BufferHandle>;
   addBuffer: (blob: Blob) => Promise<void>;
-  writeBlob: (blob: Blob) => Promise<void>;
-  sendFileBlobs: (fileName: string, fileHandle: FileHandle) => Promise<void>; 
+  writeBuffer: (blob: Blob, onComplete: () => void) => Promise<void>;
+  sendFileBlobs: (taskID: string, fileName: string, fileHandle: FileHandle) => Promise<void>; 
 };
 
 
@@ -39,7 +40,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       return { buffers: newBuffers };
     });
   },
-  writeBlob: async (blob: Blob) => {
+  writeBuffer: async (blob: Blob, onComplete: () => void) => {
     const { size, data, chunkIndex, fileName } = blob;
     const offset = chunkIndex * Number(size);
 
@@ -53,6 +54,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
 
     const buffers = get().buffers;
     const buffer = buffers.get(blob.fileName);
+    console.log(`Writing chunk ${chunkIndex + 1}/${buffer?.totalBlobs} for file: ${fileName}`);
     if (buffer) {
       const updatedBuffer: BufferHandle = {
         ...buffer,
@@ -60,9 +62,11 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       };
 
       const newBuffers = new Map(buffers);
+
       if (updatedBuffer.receivedBlobs === updatedBuffer.totalBlobs) {
         await fileHandle.close();
         newBuffers.delete(fileName);
+        onComplete();
       } else {
         newBuffers.set(fileName, updatedBuffer);
       }
@@ -70,7 +74,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       set({ buffers: newBuffers });
     }
   },
-  sendFileBlobs: async (fileName: string, fileHandle: FileHandle) => {
+  sendFileBlobs: async (taskID: string, fileName: string, fileHandle: FileHandle) => {
     const client = useClientStore.getState().client;
     const conn = useClientStore.getState().conn;
     if (!client || !conn) throw new Error('Client or connection not found');
@@ -95,9 +99,9 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       const chunkData = buffer.slice(0, bytesRead);
 
       const blob: Blob = {
-        src: client.id,
-        dst: client.id,
-        channelName: `transfer:${client.id}`,
+        srcClientID: client.id,
+        dstClientID: client.id,
+        groupID: client.group_id,
         timestamp: new Date().toISOString(),
         size: new Long(chunkData.length),
         data: chunkData,
@@ -105,7 +109,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
         fileType: 'application/octet-stream',
         chunkIndex: i,
         totalChunks,
-        taskId: 'task-id-placeholder',
+        taskId: taskID,
       };
       offset += bytesRead;
 

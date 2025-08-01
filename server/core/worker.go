@@ -11,6 +11,8 @@ type Worker struct {
 	ID             int
 	Queue          chan *protob.Blob
 	ChannelManager *ChannelManager
+	WorkerPool    *WorkerPool
+	
 }
 
 func NewWorker(id int, chm *ChannelManager) *Worker {
@@ -26,46 +28,27 @@ func (w *Worker) StartWorker() {
 		for blob := range w.Queue {
 			log.Printf("[Worker %d] Processing chunk #%d from file %s\n", w.ID, blob.ChunkIndex, blob.FileName)
 
-			channel, err := w.ChannelManager.GetChannel(blob.GetChannelName())
+			channel, err := w.ChannelManager.GetChannel(blob.GetGroupID())
 			if err != nil {
-				log.Printf("[Worker %d] Error getting channel %s: %v\n", w.ID, blob.GetChannelName(), err)
+				log.Printf("[Worker %d] Error getting channel %s: %v\n", w.ID, blob.GetGroupID(), err)
 				continue
 			}
-			dst, err := channel.GetClient(blob.GetDst())
+			dst, err := channel.GetClient(blob.GetDstClientID())
 			if err != nil {
-				log.Printf("[Worker %d] Error getting client %s: %v\n", w.ID, blob.GetDst(), err)
+				log.Printf("[Worker %d] Error getting client %s: %v\n", w.ID, blob.GetDstClientID(), err)
 				
 				continue
 			}
 
 			channel.SendToClient(blob, dst)
-
-			if blob.GetChunkIndex() == blob.GetTotalChunks()-1 {
-				res := &ChannelResponse{
-					ClientID: blob.Dst, 
-					Channel: blob.ChannelName,
-					Task:    "upload-complete",
-					TaskID:  "",
-					Success: true,
-					Error:   "",
-				}
-
-				if err := channel.SendToClient(res, dst); err != nil {
-					log.Printf("[Worker %d] Error sending upload completion message: %v", w.ID, err)
-				} else {
-					log.Printf("[Worker %d] Upload complete message sent to client %s", w.ID, blob.GetDst())
-				}
-			}
 		}
 	}()
 }
-
 
 type WorkerPool struct {
 	Workers []*Worker
 	next    int
 	mu      sync.Mutex
-	done    chan ChannelResponse
 }
 
 func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
@@ -73,7 +56,6 @@ func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
 	pool := &WorkerPool{
 		Workers: make([]*Worker, num),
 		next: 0,
-		done: make(chan ChannelResponse),
 	}
 	for i := 0; i < num; i++ {
 		w := NewWorker(i, chm)
@@ -81,6 +63,7 @@ func NewWorkerPool(num int, chm *ChannelManager) *WorkerPool {
 		w.StartWorker()
 	}
 	log.Println("[WorkerPool] Creating worker pool with", num, "workers")
+
 	return pool
 }
 

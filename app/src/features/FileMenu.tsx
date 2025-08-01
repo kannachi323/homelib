@@ -1,18 +1,18 @@
 import { useRef, useState, useEffect } from 'react';
 import { FilePlus, Plus, FolderPlus, FolderUp, FileUp } from 'lucide-react';
 
-import { useClickOutside } from '../../hooks/useClickOutside';
-import { useElementSize } from '../../hooks/useElementSize';
+import { useClickOutside } from '../hooks/useClickOutside';
+import { useElementSize } from '../hooks/useElementSize';
 
 
 
 import { open } from '@tauri-apps/plugin-dialog';
 import { open as openFile } from '@tauri-apps/plugin-fs';
-import { useFileExplorerStore } from '../../stores/useFileExplorerStore';
-import { useClientStore } from '../../stores/useClientStore';
+import { useFileExplorerStore } from '../stores/useFileExplorerStore';
+import { useClientStore } from '../stores/useClientStore';
 import { writeFile } from '@tauri-apps/plugin-fs';
-import { useBlobBufferStore } from '../../stores/useBlobBufferStore';
-import { useChannelStore, TransferStatus } from '../../stores/useChannelStore';
+import { useBlobBufferStore } from '../stores/useBlobBufferStore';
+import { useChannelStore, TransferTask } from '../stores/useChannelStore';
 
 
 export function FileMenuTab({ isMenuOpen }: { isMenuOpen: boolean }) {
@@ -158,7 +158,7 @@ function CreateItems() {
 
 function UploadItems() {
   const { client, conn } = useClientStore();
-  const { createTransferTask } = useChannelStore.getState();
+  const createTransferTask = useChannelStore.getState().createTransferTask;
 
   if (!client || !conn) {
     console.error("Client or connection is not available");
@@ -180,7 +180,12 @@ function UploadItems() {
       return;
     }
 
-    createTransferTask(client, conn, TransferStatus.UploadStart);
+    const taskID = createTransferTask(TransferTask.UploadStart, client.id, client.id);
+    if (!taskID) {
+      console.error("Failed to create transfer task");
+      return;
+    }
+    
     const fileHandle = await openFile(selected[0], { read: true, write: true, create: true });
     for (const filePath of selected as string[]) {
       if (!fileHandle) {
@@ -189,7 +194,7 @@ function UploadItems() {
       }
       try {
         const currentPath = useFileExplorerStore.getState().currentPath + '/' + filePath.split('/').pop();
-        await useBlobBufferStore.getState().sendFileBlobs(currentPath, fileHandle);
+        await useBlobBufferStore.getState().sendFileBlobs(taskID, currentPath, fileHandle);
       } catch (error) {
         console.error(`Error sending file blobs for ${filePath}:`, error);
       }

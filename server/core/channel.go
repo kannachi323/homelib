@@ -18,21 +18,13 @@ type ChannelManager struct {
 }
 
 func NewChannelManager() *ChannelManager {
-	handler := NewTransferHandler()
-	transferChannel, err := NewChannel("proxy:system", "server to send out notifications", handler)
-	if err != nil {
-		log.Println("Error creating system channel:", err)
-		return nil
-	}
 
 	return &ChannelManager{
-		Channels: map[string]*Channel{
-			"system": transferChannel,
-		},
+		Channels: map[string]*Channel{},
 	}
 }
 
-func (cm *ChannelManager) CreateChannel(name, info, channelType string) (*Channel, error) {
+func (cm *ChannelManager) CreateChannel(id, name, info string) (*Channel, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -41,26 +33,26 @@ func (cm *ChannelManager) CreateChannel(name, info, channelType string) (*Channe
 	}
 
 	var handler ChannelHandler
-	switch channelType {
+	switch name {
 	case "transfer":
 		handler = NewTransferHandler()
 	default:
 		return nil, errors.New("unknown channel type")
 	}
 
-	ch, err := NewChannel(name, info, handler)
+	ch, err := NewChannel(id, name, info, handler)
 	if err != nil {
 		return nil, err
 	}
-
-	cm.Channels[name] = ch
+	log.Println("Creating new channel:", id)
+	cm.Channels[id] = ch
 	return ch, nil
 }
 
 // ChannelAddClient adds a client to a channel, creating the channel if it doesn't exist.
-func (cm *ChannelManager) ChannelAddClient(client *Client, channelName string) error {
+func (cm *ChannelManager) ChannelAddClient(client *Client, id string) error {
 	cm.mu.RLock()
-	channel, exists := cm.Channels[channelName]
+	channel, exists := cm.Channels[id]
 	cm.mu.RUnlock()
 
 	if !exists {
@@ -76,12 +68,12 @@ func (cm *ChannelManager) ChannelAddClient(client *Client, channelName string) e
 }
 
 // ChannelRemoveClient removes a client from the given channel.
-func (cm *ChannelManager) ChannelRemoveClient(client *Client, channelName string) error {
+func (cm *ChannelManager) ChannelRemoveClient(client *Client, id string) error {
 	cm.mu.RLock()
-	channel, exists := cm.Channels[channelName]
+	channel, exists := cm.Channels[id]
 	cm.mu.RUnlock()
 	if !exists {
-		log.Println("Channel does not exist:", channelName)
+		log.Println("Channel does not exist:", id)
 		return errors.New("channel does not exist")
 	}
 
@@ -110,6 +102,7 @@ func (cm *ChannelManager) GetChannel(name string) (*Channel, error) {
 
 // Channel represents a group of clients.
 type Channel struct {
+	ID		string            `json:"id"`
 	Name    string            `json:"name"`
 	Info    string            `json:"info"`
 	Clients map[string]*Client
@@ -118,8 +111,9 @@ type Channel struct {
 }
 
 // NewChannel creates a new Channel instance.
-func NewChannel(name, info string, handler ChannelHandler) (*Channel, error) {
+func NewChannel(id, name, info string, handler ChannelHandler) (*Channel, error) {
 	return &Channel{
+		ID:      id,
 		Name:    name,
 		Info:    info,
 		Clients: make(map[string]*Client),
@@ -190,7 +184,6 @@ func (ch *Channel) SendToClient(res interface{}, client *Client) error {
 	return nil
 }
 
-// Also update ch.Broadcast
 func (ch *Channel) Broadcast(res *ChannelResponse) error {
 	b, err := json.Marshal(res)
 	if err != nil {
@@ -236,14 +229,13 @@ func (ch *Channel) ClientExists(clientID string) bool {
 // ChannelHandler defines the interface for handling channel tasks.
 type ChannelHandler interface {
 	HandleChannel(client *Client, req *ClientRequest, ch *Channel)
-	CreateChannelResponse(clientID, channel, task, taskId string, success bool, errMsg string) *ChannelResponse
 }
 
 // ChannelResponse represents a response to send on a channel.
 type ChannelResponse struct {
 	ClientID string      `json:"client_id"`
-	Channel  string      `json:"channel"`
-	ChannelType string	`json:"channel_type"`
+	GroupID string	  `json:"group_id,omitempty"`
+	ChannelName  string      `json:"channel_name"`
 	Task     string      `json:"task"`
 	TaskID   string      `json:"task_id,omitempty"`
 	Success  bool        `json:"success"`

@@ -1,36 +1,32 @@
 import { create } from 'zustand';
-import { type ClientRequest, type Client } from "../stores/useClientStore";
+import { type ClientRequest, useClientStore } from "../stores/useClientStore";
 import { useFileExplorerStore } from './useFileExplorerStore';
 import { Blob  } from '../proto-gen/blob';
 import { useBlobBufferStore } from './useBlobBufferStore';
+import { v4 as uuidv4 } from 'uuid';
 
-export type TransferStatus =
-  | "join"
-  | "upload"
-  | "upload-start"
-  | "upload-complete"
-  | "upload-error"
-  | "download"
-  | "download-start"
-  | "download-complete";
-
-export const TransferStatus = {
+export const TransferTask = {
   Join: "join",
+  Upload: "upload",
   UploadStart: "upload-start",
   UploadComplete: "upload-complete",
   UploadError: "upload-error",
+  Download: "download",
   DownloadStart: "download-start",
   DownloadComplete: "download-complete",
+  DownloadError: "download-error",
 } as const;
 
+
 export type ChannelResponse = {
-    client_id: string;
-    channel: string;
-    channel_type: string;
-    task: string;
-    task_id: string;
-    success: boolean;
-    error: string;
+  client_id: string;
+  group_id: string;
+  channel_name: string;
+  channel_id: string;
+  task: string;
+  task_id: string;
+  success: boolean;
+  error: string;
 };
 
 type ChannelTaskMap = Record<string, () => void>; // taskId => callback
@@ -42,8 +38,8 @@ type ChannelState = {
   addTask: (channelName: string, taskId: string, callback: () => void) => void;
   removeTask: (channelName: string, taskId: string) => void;
 
-  joinTransferChannel: (client: Client | null, conn: WebSocket | null) => void;
-  createTransferTask: (client: Client | null, conn: WebSocket | null, task: string) => void;
+  joinTransferChannel: () => void;
+  createTransferTask: (task: string, srcClientID: string, dstClientID: string) => string | null;
   
   handleChannelResponse: (data: string) => void;
   handleBinaryResponse: (data: ArrayBuffer) => Promise<void>;
@@ -69,7 +65,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   removeTask: (channelName, taskId) => {
     set((state) => {
       const channelTasks = state.channels[channelName] || {};
-      const { [taskId]: callback, ...rest } = channelTasks; //get the task map
+      const { [taskId]: callback, ...rest } = channelTasks;
       if (typeof callback === "function") {
         callback();
       }
@@ -83,14 +79,19 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     });
    },
 
-  joinTransferChannel: (client, conn) => {
+  joinTransferChannel: () => {
+    const client = useClientStore.getState().client;
     if (!client) throw new Error("Client is not defined");
+    const conn = useClientStore.getState().conn;
+    if (!conn) throw new Error("WebSocket connection is not defined");
 
     const req: ClientRequest = {
       client_id: client.id,
-      channel_name: `transfer:${client.id}`,
-      channel_type: "transfer",
+      group_id: client.group_id,
+      channel_name: "transfer",
       task: "join",
+      task_id: uuidv4(),
+      body: {}
     };
 
     if (conn?.readyState === WebSocket.OPEN) {
@@ -100,23 +101,31 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     }
   },
 
-  createTransferTask: (client, conn, task) => {
+  createTransferTask: (task, srcClientID, dstClientID) => {
+    const client = useClientStore.getState().client;
     if (!client) throw new Error("Client is not defined");
+    const conn = useClientStore.getState().conn;
+    if (!conn) throw new Error("WebSocket connection is not defined");
 
+    const newTaskID = uuidv4();
     const req: ClientRequest = {
       client_id: client.id,
-      channel_name: `transfer:${client.id}`,
-      channel_type: "transfer",
+      group_id: client.group_id,
+      channel_name: "transfer",
       task: task,
+      task_id: newTaskID,
       body: {
-        dst: client.id,
-        src: client.id,
+        src_client_id: srcClientID,
+        dst_client_id: dstClientID,
       },
     };
 
     if (conn?.readyState === WebSocket.OPEN) {
       conn.send(JSON.stringify(req));
+      return newTaskID;
     }
+
+    return null;
   },
   
   handleChannelResponse: (data: string) => {
@@ -129,40 +138,59 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     const currentPath = useFileExplorerStore.getState().currentPath;
 
     const res = JSON.parse(data) as ChannelResponse;
-        if (!res.success) {
-            console.error(`Error in channel ${res.channel}: ${res.error}`);
-            return;
-        }
+    if (!res.success) {
+        console.error(`Error in channel ${res.channel_name}: ${res.error}`);
+        return;
+    }
 
     switch (res.task) {
-      case TransferStatus.Join:
-        console.log(`Joined transfer channel: ${res.channel}`);
+      case TransferTask.Join:
+        console.log(`Joined transfer channel: ${res.client_id}`);
         break;
+      
 
-      case TransferStatus.UploadStart:
+      case TransferTask.UploadStart:
         console.log(`Upload started for taskID: ${res.task_id}`);
-        addTask(res.channel, res.task_id, () => fetchFiles(currentPath));
+        addTask(res.channel_name, res.task_id, () => fetchFiles(currentPath));
         break;
 
-      case TransferStatus.UploadComplete:
+      case TransferTask.UploadComplete:
         console.log(`Upload completed for taskID: ${res.task_id}`);
-        removeTask(res.channel, res.task_id);
+        removeTask(res.channel_name, res.task_id);
         break;
     }
   },
   handleBinaryResponse: async (data: ArrayBuffer) => {
-    console.log("Received ArrayBuffer response");
+    const client = useClientStore.getState().client;
+    if (!client) throw new Error("Client is not defined");
+    const conn = useClientStore.getState().conn;
+    if (!conn) throw new Error("WebSocket connection is not defined");
+
+
     const uint8Array = new Uint8Array(data);
     const blob = Blob.decode(uint8Array);
-    const { buffers, addBuffer, writeBlob } = useBlobBufferStore.getState();
+    const { buffers, addBuffer, writeBuffer } = useBlobBufferStore.getState();
 
     if (!buffers.has(blob.fileName)) {
       console.log("First chunk received, creating buffer for:", blob.fileName);
       await addBuffer(blob);
     }
 
-    console.log("Writing chunk to:", blob.fileName);
-    await writeBlob(blob);
+    const onComplete = () => {
+      
+      const req: ClientRequest = {
+        client_id: client.id,
+        group_id: client.group_id,
+        channel_name: "transfer",
+        task: TransferTask.UploadComplete,
+        task_id: blob.taskId,
+        body: {}
+      };
+      if (conn?.readyState === WebSocket.OPEN) {
+        conn.send(JSON.stringify(req));
+      }
+    };
+    await writeBuffer(blob, onComplete);
   }
 
     

@@ -12,9 +12,9 @@ import { Timestamp } from "./google/protobuf/timestamp";
 export const protobufPackage = "blob";
 
 export interface Blob {
-  src: string;
-  dst: string;
-  channelName: string;
+  srcClientID: string;
+  dstClientID: string;
+  groupID: string;
   timestamp: string | undefined;
   size: Long;
   data: Uint8Array;
@@ -27,9 +27,9 @@ export interface Blob {
 
 function createBaseBlob(): Blob {
   return {
-    src: "",
-    dst: "",
-    channelName: "",
+    srcClientID: "",
+    dstClientID: "",
+    groupID: "",
     timestamp: undefined,
     size: Long.ZERO,
     data: new Uint8Array(0),
@@ -43,14 +43,14 @@ function createBaseBlob(): Blob {
 
 export const Blob: MessageFns<Blob> = {
   encode(message: Blob, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.src !== "") {
-      writer.uint32(10).string(message.src);
+    if (message.srcClientID !== "") {
+      writer.uint32(10).string(message.srcClientID);
     }
-    if (message.dst !== "") {
-      writer.uint32(18).string(message.dst);
+    if (message.dstClientID !== "") {
+      writer.uint32(18).string(message.dstClientID);
     }
-    if (message.channelName !== "") {
-      writer.uint32(26).string(message.channelName);
+    if (message.groupID !== "") {
+      writer.uint32(26).string(message.groupID);
     }
     if (message.timestamp !== undefined) {
       Timestamp.encode(toTimestamp(message.timestamp), writer.uint32(34).fork()).join();
@@ -91,7 +91,7 @@ export const Blob: MessageFns<Blob> = {
             break;
           }
 
-          message.src = reader.string();
+          message.srcClientID = reader.string();
           continue;
         }
         case 2: {
@@ -99,7 +99,7 @@ export const Blob: MessageFns<Blob> = {
             break;
           }
 
-          message.dst = reader.string();
+          message.dstClientID = reader.string();
           continue;
         }
         case 3: {
@@ -107,7 +107,7 @@ export const Blob: MessageFns<Blob> = {
             break;
           }
 
-          message.channelName = reader.string();
+          message.groupID = reader.string();
           continue;
         }
         case 4: {
@@ -185,9 +185,9 @@ export const Blob: MessageFns<Blob> = {
 
   fromJSON(object: any): Blob {
     return {
-      src: isSet(object.src) ? globalThis.String(object.src) : "",
-      dst: isSet(object.dst) ? globalThis.String(object.dst) : "",
-      channelName: isSet(object.channelName) ? globalThis.String(object.channelName) : "",
+      srcClientID: isSet(object.srcClientID) ? globalThis.String(object.srcClientID) : "",
+      dstClientID: isSet(object.dstClientID) ? globalThis.String(object.dstClientID) : "",
+      groupID: isSet(object.groupID) ? globalThis.String(object.groupID) : "",
       timestamp: isSet(object.timestamp) ? globalThis.String(object.timestamp) : undefined,
       size: isSet(object.size) ? Long.fromValue(object.size) : Long.ZERO,
       data: isSet(object.data) ? bytesFromBase64(object.data) : new Uint8Array(0),
@@ -201,14 +201,14 @@ export const Blob: MessageFns<Blob> = {
 
   toJSON(message: Blob): unknown {
     const obj: any = {};
-    if (message.src !== "") {
-      obj.src = message.src;
+    if (message.srcClientID !== "") {
+      obj.srcClientID = message.srcClientID;
     }
-    if (message.dst !== "") {
-      obj.dst = message.dst;
+    if (message.dstClientID !== "") {
+      obj.dstClientID = message.dstClientID;
     }
-    if (message.channelName !== "") {
-      obj.channelName = message.channelName;
+    if (message.groupID !== "") {
+      obj.groupID = message.groupID;
     }
     if (message.timestamp !== undefined) {
       obj.timestamp = message.timestamp;
@@ -242,9 +242,9 @@ export const Blob: MessageFns<Blob> = {
   },
   fromPartial<I extends Exact<DeepPartial<Blob>, I>>(object: I): Blob {
     const message = createBaseBlob();
-    message.src = object.src ?? "";
-    message.dst = object.dst ?? "";
-    message.channelName = object.channelName ?? "";
+    message.srcClientID = object.srcClientID ?? "";
+    message.dstClientID = object.dstClientID ?? "";
+    message.groupID = object.groupID ?? "";
     message.timestamp = object.timestamp ?? undefined;
     message.size = (object.size !== undefined && object.size !== null) ? Long.fromValue(object.size) : Long.ZERO;
     message.data = object.data ?? new Uint8Array(0);
