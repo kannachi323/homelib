@@ -59,9 +59,13 @@ func (cm *ChannelManager) ChannelAddClient(client *Client, id string) error {
 		return errors.New("channel does not exist")
 	}
 
+
 	if err := channel.AddToChannel(client); err != nil {
-		log.Println("Error adding client to channel:", err)
-		return err
+		channel.Mu.Lock()
+		defer channel.Mu.Unlock()
+		log.Println("refreshing client in chnanel: ", client.ID, "on channel:", channel.Name)
+		channel.RemoveFromChannel(client.ID)
+
 	}
 
 	return nil

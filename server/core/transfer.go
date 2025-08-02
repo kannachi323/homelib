@@ -15,6 +15,7 @@ type TransferHandler struct {
 type TransferReqBody struct {
 	SrcClientID string `json:"src_client_id"`
 	DstClientID string `json:"dst_client_id"`
+	TotalChunks int    `json:"total_chunks"`
 }
 
 type TransferTask string
@@ -28,6 +29,11 @@ const (
 	DownloadComplete 	TransferTask = "download-complete"
 	DownloadError 		TransferTask = "download-error"
 )
+
+var uploaderMap = struct {
+	sync.RWMutex
+	data map[string]string
+}{data: make(map[string]string)}
 
 func NewTransferHandler() *TransferHandler {
 	return &TransferHandler{
@@ -74,7 +80,6 @@ func (s *TransferHandler) JoinTransfer(client *Client, req *ClientRequest, ch *C
 }
 
 func (s *TransferHandler) UploadStart(client *Client, req *ClientRequest, ch *Channel) error {
-	//req data should contain the src/dst clientID
 	var body TransferReqBody
 	if err := json.Unmarshal(req.Body, &body); err != nil {
 		log.Println("Error unmarshalling transfer request body:", err)
@@ -83,74 +88,86 @@ func (s *TransferHandler) UploadStart(client *Client, req *ClientRequest, ch *Ch
 
 	log.Println("Transfer request body:", body.DstClientID, body.SrcClientID)
 
-	log.Println(ch.Clients);
-	
-
-	dstClient, err := ch.GetClient(body.DstClientID);
+	dstClient, err := ch.GetClient(body.DstClientID)
 	if err != nil {
 		log.Println("Error getting destination client:", err)
 		return errors.New("failed to get destination client")
 	}
 
-	//we create a worker pool to listen for blobs fromt the src client
-	workerPool := NewWorkerPool(4, client.ChannelManager)
+	// Create worker pool just for this task
+	workerPool := NewWorkerPool(4, client.ChannelManager, body.TotalChunks)
 	log.Println("Creating worker pool for task ID:", req.TaskID)
+
+	// Save ownership of the task
+	uploaderMap.Lock()
+	uploaderMap.data[req.TaskID] = body.SrcClientID
+	uploaderMap.Unlock()
+
 	s.AddWorkerPool(req.TaskID, workerPool)
+	workerPool.Start()
 
 	res := &ChannelResponse{
-		ClientID: req.ClientID,
-		GroupID: req.GroupID,
+		ClientID:    req.ClientID,
+		GroupID:     req.GroupID,
 		ChannelName: req.ChannelName,
-		Task: string(UploadStart),
-		TaskID: req.TaskID,
-		Success: true,
-		Error: "",
+		Task:        string(UploadStart),
+		TaskID:      req.TaskID,
+		Success:     true,
+		Error:       "",
 	}
 
 	if err := ch.SendToClient(res, dstClient); err != nil {
 		log.Println("Error sending upload start message:", err)
 		return errors.New("failed to send upload start message")
 	}
+
 	return nil
 }
-
 func (s *TransferHandler) UploadComplete(client *Client, req *ClientRequest, ch *Channel) error {
-	log.Println("Upload complete for task ID:", req.TaskID)
+	log.Println("Upload complete requested for task ID:", req.TaskID)
 
-	// Get the worker pool for this task
+	// Verify ownership as you have
+
 	workerPool, ok := s.GetWorkerPool(req.TaskID)
 	if !ok {
-		log.Println("No worker pool found for task ID:", req.TaskID)
 		return errors.New("no worker pool found for task")
 	}
 
-	// Signal workers to stop processing
-	workerPool.mu.Lock()
-	defer workerPool.mu.Unlock()
-	for _, worker := range workerPool.Workers {
-		close(worker.Queue)
-	}
+	// Spawn goroutine to wait for actual completion
+	go func() {
+		workerPool.WaitForAllChunks()
 
-	delete(s.WorkerPools, req.TaskID)
+		workerPool.mu.Lock()
+		for _, worker := range workerPool.Workers {
+			close(worker.Queue)
+		}
+		workerPool.mu.Unlock()
 
-	res := &ChannelResponse{
-		ClientID: req.ClientID,
-		GroupID: req.GroupID,
-		ChannelName: req.ChannelName,
-		Task: string(UploadComplete),
-		TaskID: req.TaskID,
-		Success: true,
-		Error: "",
-	}
+		s.Mu.Lock()
+		delete(s.WorkerPools, req.TaskID)
+		s.Mu.Unlock()
 
-	if err := ch.Broadcast(res); err != nil {
-		log.Println("Error broadcasting upload complete message:", err)
-		return errors.New("failed to broadcast upload complete message")
-	}
+		// Clean uploaderMap as well...
 
+		// Notify channel of actual upload complete
+		res := &ChannelResponse{
+			ClientID:    req.ClientID,
+			GroupID:     req.GroupID,
+			ChannelName: req.ChannelName,
+			Task:        string(UploadComplete),
+			TaskID:      req.TaskID,
+			Success:     true,
+			Error:       "",
+		}
+		if err := ch.Broadcast(res); err != nil {
+			log.Println("Error broadcasting upload complete message:", err)
+		}
+	}()
+
+	// Immediately respond to the request to avoid blocking
 	return nil
-
 }
+
 
 
 //Helper funcs

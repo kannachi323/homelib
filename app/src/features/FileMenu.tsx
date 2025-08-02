@@ -180,26 +180,35 @@ function UploadItems() {
       return;
     }
 
-    const taskID = createTransferTask(TransferTask.UploadStart, client.id, client.id);
-    if (!taskID) {
-      console.error("Failed to create transfer task");
-      return;
-    }
-    
-    const fileHandle = await openFile(selected[0], { read: true, write: true, create: true });
+    const chunkSize = 2 * 1024 * 1024;
+
     for (const filePath of selected as string[]) {
+      const fileHandle = await openFile(filePath, { read: true });
       if (!fileHandle) {
         console.error(`Failed to open file: ${filePath}`);
-        break;
+        continue;
       }
+
+      const fileInfo = await fileHandle.stat();
+      const fileSize = fileInfo.size;
+      const totalChunks = Math.ceil(fileSize / chunkSize);
+
+      const taskID = createTransferTask(TransferTask.UploadStart, client.id, client.id, totalChunks);
+      if (!taskID) {
+        console.error("Failed to create transfer task");
+        continue;
+      }
+
+      const currentPath = useFileExplorerStore.getState().currentPath + '/' + filePath.split('/').pop();
+
       try {
-        const currentPath = useFileExplorerStore.getState().currentPath + '/' + filePath.split('/').pop();
         await useBlobBufferStore.getState().sendFileBlobs(taskID, currentPath, fileHandle);
       } catch (error) {
         console.error(`Error sending file blobs for ${filePath}:`, error);
       }
     }
   }
+
 
   return (
     <>

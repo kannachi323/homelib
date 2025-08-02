@@ -135,9 +135,11 @@ func (c *Client) HandleBinaryMessage(msg []byte) error {
 
 func (c *Client) ClientClose() {
 	c.closeOnce.Do(func() {
+		log.Println("Closing client connection:", c.ID)
 		close(c.Outgoing)
 		close(c.Incoming)
 		c.Disconnected.Store(true)
+		c.ChannelManager.ChannelRemoveClient(c, c.ID)
 		c.Conn.Close()
 	})
 }
