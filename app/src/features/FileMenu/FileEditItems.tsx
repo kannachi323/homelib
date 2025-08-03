@@ -35,12 +35,7 @@ export function FileEditItems() {
       }
       <li
         className="flex items-center p-2 cursor-pointer hover:bg-[#5d5c5c]"
-        onClick={() => {
-            if (confirm("Are you sure you want to delete the selected file(s)?")) {
-              handleDelete();
-            }
-        }}
-
+        onClick={handleDelete}
       >
         <Trash2 className="w-5 h-5 mr-2"/>
         <p>Delete</p>

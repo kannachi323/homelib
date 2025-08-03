@@ -1,5 +1,5 @@
-import { open } from "@tauri-apps/plugin-dialog";
-import { open as openFile, stat, readDir, type DirEntry, mkdir, writeFile, remove, rename } from "@tauri-apps/plugin-fs";
+import { open, confirm } from "@tauri-apps/plugin-dialog";
+import { open as openFile, stat, readDir, type DirEntry, mkdir, writeFile, remove, rename} from "@tauri-apps/plugin-fs";
 import { useFileExplorerStore, type File } from "@/stores/useFileExplorerStore";
 import { useBlobBufferStore } from "@/stores/useBlobBufferStore";
 import { useClientStore } from "@/stores/useClientStore";
@@ -121,9 +121,24 @@ async function buildFolder(entries: DirEntry[], parentPath: string) {
 
 export async function handleNewFile() {
   const fetchFiles = useFileExplorerStore.getState().fetchFiles;
-  const currentPath = useFileExplorerStore.getState().currentPath + "/New File";
+  const currentPath = useFileExplorerStore.getState().currentPath;
+  
   try {
-      await writeFile(currentPath, new Uint8Array(0));
+    const entries = await readDir(currentPath);
+    const fileNamesArray = await Promise.all(entries.map(entry => basename(entry.name)));
+    const fileNames = new Set(fileNamesArray);
+
+    let fileName = "New file";
+    let i = 0;
+
+    while (fileNames.has(fileName)) {
+      i += 1;
+      fileName = `New file (${i})`;
+    }
+
+    const newFilePath = `${currentPath}/${fileName}`;
+    await writeFile(newFilePath, new Uint8Array(0));
+
   } catch (error) {
       console.error("Error creating new file:", error);
   }
@@ -161,6 +176,16 @@ export async function handleDelete() {
   console.log("Selected files for deletion:", selectedFiles);
   if (selectedFiles.length === 0) {
     console.warn("No files selected for deletion");
+    return;
+  }
+
+  const confirmDelete = await confirm("Are you sure you want to delete the selected files?",
+    { title: 'Tauri', kind: 'warning', okLabel: 'Delete', cancelLabel: 'Cancel' }
+  );
+  if (!confirmDelete) {
+    console.log("Deletion cancelled by user", {
+
+    });
     return;
   }
 

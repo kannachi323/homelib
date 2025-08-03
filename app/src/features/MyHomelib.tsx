@@ -6,7 +6,6 @@ import { CiGrid41 } from "react-icons/ci";
 import { CiBoxList } from "react-icons/ci";
 import { LiaFilterSolid } from "react-icons/lia";
 
-import { useClickOutside } from "../hooks/useClickOutside";
 import FILE_SVG from "../assets/file.svg";
 import FOLDER_SVG from "../assets/folder.svg";
 
@@ -39,65 +38,69 @@ export function HomeTab({isOpen} : {isOpen: boolean}) {
     </div>
   )
 }
-
 export function HomeView() {
   const { files, startAt, fetchFiles, handleContextMenu } = useFileExplorerStore();
   const [showFileDialog, setShowFileDialog] = useState(false);
-  const [pos, setPos] = useState({x: 0, y: 0})
+  const [pos, setPos] = useState({ x: 0, y: 0 });
 
   const { syncClient } = useClientStore();
- 
-  useEffect(() => {
-      //remember what path i was on last when component was mounted
-      const lastPath = localStorage.getItem('lastPath');
-      if (lastPath) {
-        startAt(lastPath);
-        fetchFiles(lastPath);
-      } else {
-        startAt('/homelib');
-        fetchFiles('/');
-      }
 
-      syncClient();
-    }, [startAt, syncClient, fetchFiles])
+  useEffect(() => {
+    const lastPath = localStorage.getItem('lastPath');
+    if (lastPath) {
+      startAt(lastPath);
+      fetchFiles(lastPath);
+    } else {
+      startAt('/homelib');
+      fetchFiles('/');
+    }
+
+    syncClient();
+  }, [startAt, syncClient, fetchFiles]);
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-5 p-2">
-      {files?.map((file) => (
-        <div key={file.name} className="flex flex-col items-center rounded hover:bg-white/10 p-2"
-          onDoubleClick={() => handleFileClick(file)}
-          onContextMenu={(e) => {
-            e.preventDefault()
-            e.stopPropagation();
-            setPos({ x: e.clientX, y: e.clientY });
-            handleContextMenu(file);
-            setShowFileDialog(true);
-          }}
-        >
-          {file.isDir ? <img src={FOLDER_SVG} className="w-[64px] h-[64px]" /> : <img src={FILE_SVG} className="w-[64px] h-[64px]"/>}
-          <p className="text-sm text-center truncate w-full">{file.name}</p>
-          
-          {showFileDialog && 
-            <FileDialog pos={pos} showEditOptions={true} onClose={() => setShowFileDialog(false)} />
-          }
-        
-        </div>
+    <div className="relative">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-5 p-2">
+        {files?.map((file) => (
+          <div
+            key={file.name}
+            className="flex flex-col items-center rounded hover:bg-white/10 p-2"
+            onDoubleClick={() => handleFileClick(file)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPos({ x: e.clientX, y: e.clientY });
+              handleContextMenu(file);
+              setShowFileDialog(true);
+            }}
+          >
+            {file.isDir ? (
+              <img src={FOLDER_SVG} className="w-[64px] h-[64px]" />
+            ) : (
+              <img src={FILE_SVG} className="w-[64px] h-[64px]" />
+            )}
+            <p className="text-sm text-center truncate w-full">{file.name}</p>
+          </div>
+        ))}
+      </div>
 
-
-      ))}
-
-        
+      {showFileDialog && (
+        <FileDialog
+          pos={pos}
+          showEditOptions={true}
+          onClose={() => setShowFileDialog(false)}
+        />
+      )}
     </div>
-  )
+  );
 }
+
 
 export function LayoutToggle() {
   const [isOpen, setIsOpen] = useState(false);
   const { layout, setLayout } = useFileExplorerStore();
 
   const toggleRef = useRef<HTMLDivElement>(null);
-
-  useClickOutside(toggleRef, () => setIsOpen(false));
 
 
   const handleLayoutChange = (view: 'grid' | 'list') => {

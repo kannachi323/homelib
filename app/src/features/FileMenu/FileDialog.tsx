@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useElementSize } from '@/hooks/useElementSize';
-import { useClickOutside } from '@/hooks/useClickOutside';
 import { FileMenuContent } from './FileMenuContent';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 
 type FileDialogProps = {
   pos: { x: number; y: number };
   showEditOptions?: boolean;
-  onClose: () => void;
+  onClose: () => void
 };
-export function FileDialog({ pos, onClose, showEditOptions = false}: FileDialogProps) {
-  const ref = useRef<HTMLDivElement>(null);
+export function FileDialog({ pos, showEditOptions = false, onClose}: FileDialogProps) {
+  const ref = useClickOutside(onClose);
   const {width, height} = useElementSize(ref);
   const [finalPos, setFinalPos] = useState(pos);
 
@@ -24,10 +24,7 @@ export function FileDialog({ pos, onClose, showEditOptions = false}: FileDialogP
 
     setFinalPos({ x: pos.x, y: pos.y });
 
-
   }, [ref, pos, width, height]);
-
-  useClickOutside(ref, onClose);
 
   return (
     <div
