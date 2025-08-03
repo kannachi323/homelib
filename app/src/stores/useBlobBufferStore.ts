@@ -9,6 +9,7 @@ type BufferHandle = {
   fileHandle: FileHandle;
   totalBlobs: number;
   receivedBlobs: number;
+  mutex: Mutex;
 };
 
 type BlobBufferStore = {
@@ -32,12 +33,15 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       create: true,
     });
 
+    const mutex = new Mutex();
+
     set((state) => {
       const newBuffers = new Map(state.buffers);
       newBuffers.set(fileName, {
         fileHandle: fileHandle,
         totalBlobs: totalChunks,
         receivedBlobs: 0,
+        mutex: mutex,
       });
       return { buffers: newBuffers };
     });
@@ -45,18 +49,11 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
   writeBuffer: async (blob: Blob) => {
     const { data, chunkIndex, fileName, size } = blob;
 
-    // 🔐 Get or create mutex
-    let mutex = fileMutexes.get(fileName);
-    if (!mutex) {
-      mutex = new Mutex();
-      fileMutexes.set(fileName, mutex);
-    }
+    const buffers = get().buffers;
+    const bufferHandle = buffers.get(fileName);
+    if (!bufferHandle) throw new Error(`No buffer found for file: ${fileName}`);
 
-    await mutex.runExclusive(async () => {
-      const buffers = get().buffers;
-      const bufferHandle = buffers.get(fileName);
-      if (!bufferHandle) throw new Error(`No buffer found for file: ${fileName}`);
-
+    await bufferHandle.mutex.runExclusive(async () => {
       const bufferSize = 2 * 1024 * 1024;
       const offset = chunkIndex * bufferSize;
       const fileHandle = bufferHandle.fileHandle;
@@ -68,6 +65,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       const updatedBufferHandle: BufferHandle = {
         ...bufferHandle,
         receivedBlobs: bufferHandle.receivedBlobs + 1,
+        mutex: bufferHandle.mutex
       };
 
       const newBuffers = new Map(buffers);
@@ -75,7 +73,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
       if (updatedBufferHandle.receivedBlobs >= updatedBufferHandle.totalBlobs) {
         await fileHandle.close();
         newBuffers.delete(fileName);
-        fileMutexes.delete(fileName); // 🔓 Clean up mutex
+        fileMutexes.delete(fileName);
       } else {
         newBuffers.set(fileName, updatedBufferHandle);
       }
@@ -117,7 +115,7 @@ export const useBlobBufferStore = create<BlobBufferStore>((set, get) => ({
         timestamp: new Date().toISOString(),
         size: Long.fromNumber(blobData.length),
         data: blobData,
-        fileName,
+        fileName: fileName,
         fileType: 'application/octet-stream',
         chunkIndex: i,
         totalChunks: totalBlobs,

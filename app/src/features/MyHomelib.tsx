@@ -12,10 +12,13 @@ import FOLDER_SVG from "../assets/folder.svg";
 
 import { useNavigate } from "react-router";
 import { Home } from "lucide-react";
-import { useFileExplorerStore, type File } from "../stores/useFileExplorerStore";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { useFileExplorerStore } from "../stores/useFileExplorerStore";
+
 
 import { useClientStore } from "../stores/useClientStore";
+
+import { handleFileClick } from "@/lib/files";
+import { FileDialog } from "./FileMenu/FileDialog";
 
 
 
@@ -38,7 +41,9 @@ export function HomeTab({isOpen} : {isOpen: boolean}) {
 }
 
 export function HomeView() {
-  const { files, navigateTo, startAt, fetchFiles } = useFileExplorerStore();
+  const { files, startAt, fetchFiles, handleContextMenu } = useFileExplorerStore();
+  const [showFileDialog, setShowFileDialog] = useState(false);
+  const [pos, setPos] = useState({x: 0, y: 0})
 
   const { syncClient } = useClientStore();
  
@@ -56,28 +61,29 @@ export function HomeView() {
       syncClient();
     }, [startAt, syncClient, fetchFiles])
 
-  async function handleFileClick(file: File) {
-    if (file.isDir) {
-      navigateTo(file.path);
-    } else {
-      await openPath(file.path);
-    }
-  }
-  
-
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-5 p-2">
       {files?.map((file) => (
         <div key={file.name} className="flex flex-col items-center rounded hover:bg-white/10 p-2"
           onDoubleClick={() => handleFileClick(file)}
           onContextMenu={(e) => {
-            console.log("Right click on file:", file.name);
+            e.preventDefault()
             e.stopPropagation();
+            setPos({ x: e.clientX, y: e.clientY });
+            handleContextMenu(file);
+            setShowFileDialog(true);
           }}
         >
           {file.isDir ? <img src={FOLDER_SVG} className="w-[64px] h-[64px]" /> : <img src={FILE_SVG} className="w-[64px] h-[64px]"/>}
           <p className="text-sm text-center truncate w-full">{file.name}</p>
+          
+          {showFileDialog && 
+            <FileDialog pos={pos} showEditOptions={true} onClose={() => setShowFileDialog(false)} />
+          }
+        
         </div>
+
+
       ))}
 
         

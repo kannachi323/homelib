@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { DiskScannerTab } from "./DiskScanner";
 import { HomeTab } from "./MyHomelib";
 import { DeviceScannerTab } from "./DeviceScanner";
-import { FileMenuTab } from "./FileMenu";
+import { FileMenuTab } from "@/features/FileMenu/FileMenuTab";
 
 export function UtilsTray({isOpen}: {isOpen: boolean}) {
   const navigate = useNavigate();

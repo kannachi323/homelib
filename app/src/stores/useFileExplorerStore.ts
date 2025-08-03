@@ -1,4 +1,3 @@
-// useFileExplorerStore.ts
 import { create } from 'zustand';
 
 type Layout = 'grid' | 'list';
@@ -13,11 +12,15 @@ export type File = {
 
 type FileExplorerState = {
   currentPath: string;
+  selectedFiles: File[];
   layout: Layout;
   files: File[];
   backStack: string[];
   forwardStack: string[];
+
+
   setCurrentPath: (path: string) => void;
+  setSelectedFiles: (files: File[]) => void;
   setFiles: (files: File[]) => void;
   setLayout: (layout: Layout) => void;
   startAt: (path: string | null) => void;
@@ -25,17 +28,20 @@ type FileExplorerState = {
   goBack: () => void;
   goForward: () => void;
   fetchFiles: (path?: string) => void;
+  handleContextMenu: (file: File) => void;
 };
 
 export const useFileExplorerStore = create<FileExplorerState>((set, get) => ({
   currentPath: '/',
   layout: 'grid',
   files: [],
+  selectedFiles: [],
   backStack: [],
   forwardStack: [],
 
   setCurrentPath: (path) => set({ currentPath: path }),
   setFiles: (files) => set({ files }),
+  setSelectedFiles: (files) => set({ selectedFiles: files }),
 
   setLayout: (layout) => set({ layout }),
 
@@ -99,4 +105,11 @@ export const useFileExplorerStore = create<FileExplorerState>((set, get) => ({
       set({ files: [] });
     }
   },
+
+  handleContextMenu: (file) => {
+    const setSelectedFiles = get().setSelectedFiles;
+    const selectedFiles = get().selectedFiles;
+    setSelectedFiles([...selectedFiles, file]);
+    console.log("Context menu for file:", file);
+  }
 }));
